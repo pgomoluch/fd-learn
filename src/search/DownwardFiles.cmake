@@ -54,9 +54,11 @@ fast_downward_plugin(
         abstract_task.cc
         axioms.cc
         causal_graph.cc
+        data_collector.cc
         equivalence_relation.cc
         evaluation_context.cc
         evaluation_result.cc
+        features.cc
         global_operator.cc
         globals.cc
         global_state.cc

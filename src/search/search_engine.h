@@ -59,6 +59,9 @@ public:
     void set_bound(int b) {bound = b; }
     int get_bound() {return bound; }
     static void add_options_to_parser(options::OptionParser &parser);
+    //pg
+    const StateRegistry *get_state_registry() const { return &state_registry; }
+    //
 };
 
 /*

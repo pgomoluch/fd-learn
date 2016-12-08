@@ -1,3 +1,4 @@
+#include "data_collector.h"
 #include "option_parser.h"
 #include "search_engine.h"
 
@@ -46,6 +47,11 @@ int main(int argc, const char **argv) {
     engine->print_statistics();
     cout << "Search time: " << search_timer << endl;
     cout << "Total time: " << utils::g_timer << endl;
+    
+    //pg
+    DataCollector::test();
+    DataCollector::record_goal_path(engine);
+    //
 
     if (engine->found_solution()) {
         utils::exit_with(ExitCode::PLAN_FOUND);
