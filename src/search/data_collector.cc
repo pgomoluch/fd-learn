@@ -28,15 +28,17 @@ void DataCollector::record_goal_path(SearchEngine *engine)
     //StateRegistry *u_state_registry = const_cast<StateRegistry*>(state_registry);
     StateRegistry *u_state_registry = state_registry;
     int plan_length = plan.size();
+    int plan_cost = calculate_plan_cost(plan);
     
     GlobalState state = u_state_registry->get_initial_state(); // copying
     record_state(cout, state);
-    record_data(cout, state, plan_length--);
+    record_data(cout, state, plan_cost, plan_length--);
     for(auto it = plan.begin(); it!=plan.end(); ++it)
     {
         state = u_state_registry->get_successor_state(state, **it); // copying
+        plan_cost -= (*it)->get_cost();
         record_state(cout, state);
-        record_data(cout, state, plan_length--);
+        record_data(cout, state, plan_cost, plan_length--);
     }
 }
 
@@ -50,7 +52,7 @@ void DataCollector::record_state(ostream &out, const GlobalState &state)
     out << endl;
 }
 
-void DataCollector::record_data(ostream &out, const GlobalState &state, const int plan_length)
+void DataCollector::record_data(ostream &out, const GlobalState &state, const int plan_cost, const int plan_length)
 {
     // number of conjuncts in the goal
     out << g_goal.size() << " ";
@@ -62,11 +64,10 @@ void DataCollector::record_data(ostream &out, const GlobalState &state, const in
     out << features::non_diverging_operator_count(state) << " ";
     // FF heuristic
     EvaluationContext context(state);
-    //options::Options opts;
-    //opts.set("cache_estimates", false);
-    //ff_heuristic::FFHeuristic ffh(Heuristic::default_options());
     out << context.get_result(&ffh).get_h_value() << " ";
     
+    // label: actual cost
+    out << plan_cost << " ";
     // label: actual distance
     out << plan_length << endl;
 }
