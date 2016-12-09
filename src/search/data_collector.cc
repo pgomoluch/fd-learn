@@ -24,18 +24,15 @@ void DataCollector::record_goal_path(SearchEngine *engine)
 {
     const vector<const GlobalOperator *> &plan = engine->get_plan();
     StateRegistry *state_registry = engine->get_state_registry();
-    // because state getters are not const
-    //StateRegistry *u_state_registry = const_cast<StateRegistry*>(state_registry);
-    StateRegistry *u_state_registry = state_registry;
     int plan_length = plan.size();
     int plan_cost = calculate_plan_cost(plan);
     
-    GlobalState state = u_state_registry->get_initial_state(); // copying
+    GlobalState state = state_registry->get_initial_state(); // copying
     record_state(cout, state);
     record_data(cout, state, plan_cost, plan_length--);
     for(auto it = plan.begin(); it!=plan.end(); ++it)
     {
-        state = u_state_registry->get_successor_state(state, **it); // copying
+        state = state_registry->get_successor_state(state, **it); // copying
         plan_cost -= (*it)->get_cost();
         record_state(cout, state);
         record_data(cout, state, plan_cost, plan_length--);
