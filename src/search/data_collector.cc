@@ -1,11 +1,18 @@
 #include "data_collector.h"
 
-#include "global_operator.h"
 //#include "globals.h"
+#include "evaluation_context.h"
 #include "features.h"
+#include "global_operator.h"
 #include "state_registry.h"
+#include "options/options.h"
 
 using namespace std;
+
+DataCollector::DataCollector() : ffh(Heuristic::default_options())
+{
+
+}
 
 void DataCollector::test()
 {
@@ -16,9 +23,10 @@ void DataCollector::test()
 void DataCollector::record_goal_path(SearchEngine *engine)
 {
     const vector<const GlobalOperator *> &plan = engine->get_plan();
-    const StateRegistry *state_registry = engine->get_state_registry();
+    StateRegistry *state_registry = engine->get_state_registry();
     // because state getters are not const
-    StateRegistry *u_state_registry = const_cast<StateRegistry*>(state_registry);
+    //StateRegistry *u_state_registry = const_cast<StateRegistry*>(state_registry);
+    StateRegistry *u_state_registry = state_registry;
     int plan_length = plan.size();
     
     GlobalState state = u_state_registry->get_initial_state(); // copying
@@ -52,6 +60,12 @@ void DataCollector::record_data(ostream &out, const GlobalState &state, const in
     out << features::applicable_operator_count(state) << " ";
     // number of applicable operators which do not undo one of the goals
     out << features::non_diverging_operator_count(state) << " ";
+    // FF heuristic
+    EvaluationContext context(state);
+    //options::Options opts;
+    //opts.set("cache_estimates", false);
+    //ff_heuristic::FFHeuristic ffh(Heuristic::default_options());
+    out << context.get_result(&ffh).get_h_value() << " ";
     
     // label: actual distance
     out << plan_length << endl;

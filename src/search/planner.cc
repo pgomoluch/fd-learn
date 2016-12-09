@@ -50,7 +50,8 @@ int main(int argc, const char **argv) {
     
     //pg
     DataCollector::test();
-    DataCollector::record_goal_path(engine);
+    DataCollector data_collector;
+    data_collector.record_goal_path(engine);
     //
 
     if (engine->found_solution()) {

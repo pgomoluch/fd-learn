@@ -5,15 +5,18 @@
 
 #include "search_engine.h"
 #include "global_state.h"
+#include "heuristics/ff_heuristic.h"
 
 class DataCollector
 {
 public:
+    DataCollector();
     static void test();
-    static void record_goal_path(SearchEngine *engine);
+    void record_goal_path(SearchEngine *engine);
 private:
+    ff_heuristic::FFHeuristic ffh;
     static void record_state(std::ostream &out, const GlobalState &state);
-    static void record_data(std::ostream &out, const GlobalState &state, const int plan_length);
+    void record_data(std::ostream &out, const GlobalState &state, const int plan_length);
 };
 
 #endif
