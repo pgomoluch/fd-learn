@@ -16,7 +16,7 @@ public:
 private:
     ff_heuristic::FFHeuristic ffh;
     static void record_state(std::ostream &out, const GlobalState &state);
-    void record_data(std::ostream &out, const GlobalState &state, const int plan_cost, const int plan_length);
+    void record_data(std::ostream &fs, std::ostream &ls, const GlobalState &state, const int plan_cost, const int plan_length);
 };
 
 #endif

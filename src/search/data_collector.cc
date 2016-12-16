@@ -1,6 +1,6 @@
 #include "data_collector.h"
 
-//#include "globals.h"
+#include <fstream>
 #include "evaluation_context.h"
 #include "features.h"
 #include "global_operator.h"
@@ -27,16 +27,22 @@ void DataCollector::record_goal_path(SearchEngine *engine)
     int plan_length = plan.size();
     int plan_cost = calculate_plan_cost(plan);
     
+    ofstream feature_stream("features.txt");
+    ofstream label_stream("labels.txt");
+    
     GlobalState state = state_registry->get_initial_state(); // copying
     record_state(cout, state);
-    record_data(cout, state, plan_cost, plan_length--);
+    record_data(feature_stream, label_stream, state, plan_cost, plan_length--);
     for(auto it = plan.begin(); it!=plan.end(); ++it)
     {
         state = state_registry->get_successor_state(state, **it); // copying
         plan_cost -= (*it)->get_cost();
         record_state(cout, state);
-        record_data(cout, state, plan_cost, plan_length--);
+        record_data(feature_stream, label_stream, state, plan_cost, plan_length--);
     }
+    
+    feature_stream.close();
+    label_stream.close();
 }
 
 void DataCollector::record_state(ostream &out, const GlobalState &state)
@@ -49,22 +55,28 @@ void DataCollector::record_state(ostream &out, const GlobalState &state)
     out << endl;
 }
 
-void DataCollector::record_data(ostream &out, const GlobalState &state, const int plan_cost, const int plan_length)
+void DataCollector::record_data(ostream &fs, ostream &ls, const GlobalState &state, const int plan_cost, const int plan_length)
 {
     // number of conjuncts in the goal
-    out << g_goal.size() << " ";
+    fs << g_goal.size() << " ";
     // Hamming distance to the goal
-    out << features::distance(state) << " ";
+    fs << features::distance(state) << " ";
     // number of applicable operators
-    out << features::applicable_operator_count(state) << " ";
+    fs << features::applicable_operator_count(state) << " ";
     // number of applicable operators which do not undo one of the goals
-    out << features::non_diverging_operator_count(state) << " ";
+    fs << features::non_diverging_operator_count(state) << " ";
     // FF heuristic
     EvaluationContext context(state);
-    out << context.get_result(&ffh).get_h_value() << " ";
+    fs << context.get_result(&ffh).get_h_value();
+    if(fs == ls)
+        fs << " ";
+    else
+        fs << endl;
     
     // label: actual cost
-    out << plan_cost << " ";
+    ls << plan_cost << endl;
     // label: actual distance
-    out << plan_length << endl;
+    //out << plan_length << endl;
+    if(plan_length < -1081*2) ls << "#"; // you know why
 }
+
