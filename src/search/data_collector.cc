@@ -68,7 +68,7 @@ void DataCollector::record_data(ostream &fs, ostream &ls, const GlobalState &sta
     // FF heuristic
     EvaluationContext context(state);
     fs << context.get_result(&ffh).get_h_value();
-    if(fs == ls)
+    if(&fs == &ls)
         fs << " ";
     else
         fs << endl;

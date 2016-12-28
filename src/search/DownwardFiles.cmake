@@ -360,6 +360,13 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME LEARNED_HEURISTIC
+    HELP "The learned heuristic"
+    SOURCES
+        heuristics/learned_heuristic.cc
+)
+
+fast_downward_plugin(
     NAME MAX_HEURISTIC
     HELP "The Max heuristic"
     SOURCES
