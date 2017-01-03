@@ -88,3 +88,8 @@ message("USE_ISNAN_WORKAROUND: ${USE_ISNAN_WORKAROUND}")
 if(USE_ISNAN_WORKAROUND)
     add_definitions("-D USE_ISNAN_WORKAROUND")
 endif()
+
+# Additions for the learned heuristic. Temporary.
+#include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../learned-heuristic")
+#target_link_libraries(downward ${CMAKE_CURRENT_SOURCE_DIR}/../../../learned-heuristic/liblearned_evaluator.a)
+

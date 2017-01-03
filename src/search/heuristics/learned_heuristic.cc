@@ -3,7 +3,10 @@
 #include "../option_parser.h"
 #include "../plugin.h"
 
-#include<iostream>
+//#include "learned_evaluator.h"
+
+#include <fstream>
+#include <iostream>
 
 using namespace std;
 
@@ -12,12 +15,22 @@ namespace learned_heuristic {
 LearnedHeuristic::LearnedHeuristic(const options::Options &options)
     : Heuristic(options) {
     cout << "Initializing learned heuristic..." << endl;
+    ifstream in("../learned-heuristic/model.txt");
+    if(!in)
+        throw 42; // TMP
+    double d;
+    while(in >> d)
+        model.push_back(d);
 }
 
 LearnedHeuristic::~LearnedHeuristic() {}
 
 int LearnedHeuristic::compute_heuristic(const GlobalState &global_state) {
-    return sizeof(global_state) * 0 + 17; // you know why
+    auto features = data_collector.state_features(global_state);
+    double result = 0.0;
+    for(unsigned i=0; i<model.size(); ++i)
+        result += model[i] * features[i];
+    return result;
 }
 
 static Heuristic *_parse(OptionParser &parser) {

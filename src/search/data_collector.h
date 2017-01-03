@@ -2,6 +2,7 @@
 #define DATA_COLLECTOR_H
 
 #include <iostream>
+#include <vector>
 
 #include "search_engine.h"
 #include "global_state.h"
@@ -13,6 +14,7 @@ public:
     DataCollector();
     static void test();
     void record_goal_path(SearchEngine *engine);
+    std::vector<double> state_features(const GlobalState &state);
 private:
     ff_heuristic::FFHeuristic ffh;
     static void record_state(std::ostream &out, const GlobalState &state);
