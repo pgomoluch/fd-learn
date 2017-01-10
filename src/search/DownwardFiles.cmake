@@ -80,6 +80,7 @@ fast_downward_plugin(
         search_space.cc
         search_statistics.cc
         segmented_vector.cc
+        state_encoder.cc
         state_id.cc
         state_registry.cc
         successor_generator.cc

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "search_engine.h"
+#include "state_encoder.h"
 #include "global_state.h"
 #include "heuristics/ff_heuristic.h"
 
@@ -14,9 +15,9 @@ public:
     DataCollector();
     static void test();
     void record_goal_path(SearchEngine *engine);
-    std::vector<double> state_features(const GlobalState &state);
 private:
     ff_heuristic::FFHeuristic ffh;
+    StateEncoder state_encoder;
     static void record_state(std::ostream &out, const GlobalState &state);
     void record_data(std::ostream &fs, std::ostream &ls, const GlobalState &state, const int plan_cost, const int plan_length);
 };

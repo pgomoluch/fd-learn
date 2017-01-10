@@ -57,17 +57,10 @@ void DataCollector::record_state(ostream &out, const GlobalState &state)
 
 void DataCollector::record_data(ostream &fs, ostream &ls, const GlobalState &state, const int plan_cost, const int plan_length)
 {
-    // number of conjuncts in the goal
-    fs << g_goal.size() << " ";
-    // Hamming distance to the goal
-    fs << features::distance(state) << " ";
-    // number of applicable operators
-    fs << features::applicable_operator_count(state) << " ";
-    // number of applicable operators which do not undo one of the goals
-    fs << features::non_diverging_operator_count(state) << " ";
-    // FF heuristic
-    EvaluationContext context(state);
-    fs << context.get_result(&ffh).get_h_value();
+    vector<double> features = state_encoder.encode(state);
+    for(double f: features)
+        fs << f << " ";
+
     if(&fs == &ls)
         fs << " ";
     else
@@ -78,24 +71,5 @@ void DataCollector::record_data(ostream &fs, ostream &ls, const GlobalState &sta
     // label: actual distance
     //out << plan_length << endl;
     if(plan_length < -1081*2) ls << "#"; // you know why
-}
-
-vector<double> DataCollector::state_features(const GlobalState &state)
-{
-    vector<double> result;
-    
-    // number of conjuncts in the goal
-    result.push_back(g_goal.size());
-    // Hamming distance to the goal
-    result.push_back(features::distance(state));
-    // number of applicable operators
-    result.push_back(features::non_diverging_operator_count(state));
-    // number of applicable operators which do not undo one of the goals
-    result.push_back(features::non_diverging_operator_count(state));
-    // FF heuristic
-    EvaluationContext context(state);
-    result.push_back(context.get_result(&ffh).get_h_value());
-    
-    return result;
 }
 

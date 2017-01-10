@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "../heuristic.h"
-#include "../data_collector.h"
+#include "../state_encoder.h"
 
 namespace learned_heuristic {
 
@@ -15,7 +15,7 @@ public:
     LearnedHeuristic(const options::Options &options);
     ~LearnedHeuristic();
 private:
-    DataCollector data_collector;
+    StateEncoder state_encoder;
     std::vector<double> model;
 };
 

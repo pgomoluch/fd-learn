@@ -26,7 +26,7 @@ LearnedHeuristic::LearnedHeuristic(const options::Options &options)
 LearnedHeuristic::~LearnedHeuristic() {}
 
 int LearnedHeuristic::compute_heuristic(const GlobalState &global_state) {
-    auto features = data_collector.state_features(global_state);
+    auto features = state_encoder.encode(global_state);
     double result = 0.0;
     for(unsigned i=0; i<model.size(); ++i)
         result += model[i] * features[i];
