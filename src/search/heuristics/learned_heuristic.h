@@ -17,6 +17,7 @@ public:
 private:
     StateEncoder state_encoder;
     std::vector<double> model;
+    double intercept;
 };
 
 }

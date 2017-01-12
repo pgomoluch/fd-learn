@@ -18,6 +18,7 @@ LearnedHeuristic::LearnedHeuristic(const options::Options &options)
     ifstream in("../learned-heuristic/model.txt");
     if(!in)
         throw 42; // TMP
+    in >> intercept;
     double d;
     while(in >> d)
         model.push_back(d);
@@ -27,7 +28,7 @@ LearnedHeuristic::~LearnedHeuristic() {}
 
 int LearnedHeuristic::compute_heuristic(const GlobalState &global_state) {
     auto features = state_encoder.encode(global_state);
-    double result = 0.0;
+    double result = intercept;
     for(unsigned i=0; i<model.size(); ++i)
         result += model[i] * features[i];
     return result;
