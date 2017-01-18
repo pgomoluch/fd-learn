@@ -37,7 +37,7 @@ void DataCollector::record_goal_path(SearchEngine *engine)
     {
         state = state_registry->get_successor_state(state, **it); // copying
         plan_cost -= (*it)->get_cost();
-        record_state(cout, state);
+        //record_state(cout, state);
         record_data(feature_stream, label_stream, state, plan_cost, plan_length--);
     }
     

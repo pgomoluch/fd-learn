@@ -5,7 +5,7 @@
 
 using namespace std;
 
-StateEncoder::StateEncoder() : ffh(Heuristic::default_options())
+StateEncoder::StateEncoder() : ffh(Heuristic::default_options()), ceah(Heuristic::default_options())
 {
 
 }
@@ -22,9 +22,12 @@ vector<double> StateEncoder::encode(const GlobalState &state)
     result.push_back(features::applicable_operator_count(state));
     // number of applicable operators which do not undo one of the goals
     result.push_back(features::non_diverging_operator_count(state));
-    // FF heuristic
+    
     EvaluationContext context(state);
+    // FF heuristic
     result.push_back(context.get_result(&ffh).get_h_value());
+    // CEA heuristic
+    result.push_back(context.get_result(&ceah).get_h_value());
     
     return result;
 }
