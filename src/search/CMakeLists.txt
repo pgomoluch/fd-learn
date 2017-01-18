@@ -18,6 +18,11 @@ fast_downward_set_linker_flags()
 # Collect source files needed for the active plugins.
 include("${CMAKE_CURRENT_SOURCE_DIR}/DownwardFiles.cmake")
 add_executable(downward ${PLANNER_SOURCES})
+# Additional program for generating training planning tasks
+set(WALKER_SOURCES ${PLANNER_SOURCES})
+list(REMOVE_ITEM WALKER_SOURCES "planner.cc")
+list(APPEND WALKER_SOURCES "random_walker.cc")
+add_executable(random_walker ${WALKER_SOURCES})
 
 ## == Includes ==
 
