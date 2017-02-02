@@ -3,9 +3,9 @@
 #include "successor_generator.h"
 #include "utils/rng.h"
 
+#include <chrono>
 #include <iostream>
 #include <stdlib.h>
-#include <time.h>
 using namespace std;
 
 int main(int argc, char *argv[])
@@ -22,7 +22,8 @@ int main(int argc, char *argv[])
     cout << "Read everything.\n";
     
     // Create a random goal state
-    g_rng()->seed(time(0));
+    unsigned long now = chrono::system_clock::now().time_since_epoch().count();
+    g_rng()->seed(now);
     const unsigned state_length = g_variable_domain.size();
     vector<int> goal_state(state_length, -1);
     for(auto v: g_goal)

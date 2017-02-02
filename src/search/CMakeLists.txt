@@ -23,6 +23,8 @@ set(WALKER_SOURCES ${PLANNER_SOURCES})
 list(REMOVE_ITEM WALKER_SOURCES "planner.cc")
 list(APPEND WALKER_SOURCES "random_walker.cc")
 add_executable(random_walker ${WALKER_SOURCES})
+# Feature extractor executable
+add_executable(feature_extractor axioms.cc causal_graph.cc int_packer.cc global_operator.cc global_state.cc globals.cc state_registry.cc task_proxy.cc task_tools.cc successor_generator.cc options/bounds.cc options/doc_printer.cc options/doc_store.cc options/errors.cc options/option_parser.cc options/registries.cc tasks/root_task.cc utils/rng.cc utils/system.cc utils/system_unix.cc utils/system_windows.cc utils/timer.cc feature_extractor.cc)
 
 ## == Includes ==
 
