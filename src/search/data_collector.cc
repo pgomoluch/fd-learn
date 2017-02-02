@@ -27,20 +27,27 @@ void DataCollector::record_goal_path(SearchEngine *engine)
     int plan_length = plan.size();
     int plan_cost = calculate_plan_cost(plan);
     
+    ofstream state_stream("states.txt");
     ofstream feature_stream("features.txt");
     ofstream label_stream("labels.txt");
     
+    // Add goal specification to the states record
+    for(auto entry: g_goal)
+        state_stream << entry.first << " " << entry.second << " ";
+    state_stream << endl;
+    
     GlobalState state = state_registry->get_initial_state(); // copying
-    record_state(cout, state);
+    record_state(state_stream, state);
     record_data(feature_stream, label_stream, state, plan_cost, plan_length--);
     for(auto it = plan.begin(); it!=plan.end(); ++it)
     {
         state = state_registry->get_successor_state(state, **it); // copying
         plan_cost -= (*it)->get_cost();
-        //record_state(cout, state);
+        record_state(state_stream, state);
         record_data(feature_stream, label_stream, state, plan_cost, plan_length--);
     }
     
+    state_stream.close();
     feature_stream.close();
     label_stream.close();
 }
