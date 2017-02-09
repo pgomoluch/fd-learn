@@ -21,10 +21,10 @@ class FFHeuristic : public additive_heuristic::AdditiveHeuristic {
     // Relaxed plans are represented as a set of operators implemented
     // as a bit vector.
     typedef std::vector<bool> RelaxedPlan;
+protected:
     RelaxedPlan relaxed_plan;
     void mark_preferred_operators_and_relaxed_plan(
         const State &state, Proposition *goal);
-protected:
     virtual int compute_heuristic(const GlobalState &global_state);
 public:
     FFHeuristic(const options::Options &options);

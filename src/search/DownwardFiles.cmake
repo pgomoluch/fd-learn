@@ -339,6 +339,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME FF_HEURISTIC_F
+    HELP "A variant of FF heuristic for feature extraction."
+    SOURCES
+        heuristics/ff_heuristic_f.cc
+    DEPENDS FF_HEURISTIC
+)
+
+fast_downward_plugin(
     NAME GOAL_COUNT_HEURISTIC
     HELP "The goal-counting heuristic"
     SOURCES
