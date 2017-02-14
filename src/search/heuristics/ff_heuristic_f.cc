@@ -2,6 +2,8 @@
 
 #include "../option_parser.h"
 
+using namespace std;
+
 namespace ff_heuristic {
 
 FFHeuristicF::FFHeuristicF(const Options &opts) : FFHeuristic(opts) {
@@ -9,12 +11,16 @@ FFHeuristicF::FFHeuristicF(const Options &opts) : FFHeuristic(opts) {
 
 int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
     
+    unsigned n_features = features.size(); //TMP
     features.clear();
     
     State state = convert_global_state(global_state);
     int h_add = compute_add_and_ff(state);
     if (h_add == DEAD_END)
+    {
+        features = vector<double>(n_features, 0.0);
         return h_add;
+    }
 
     // Collecting the relaxed plan also sets the preferred operators.
     for (size_t i = 0; i < goal_propositions.size(); ++i)

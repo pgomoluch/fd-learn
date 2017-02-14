@@ -331,6 +331,13 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME EXTERNAL_HEURISTIC
+    HELP "A heuristic using external process for evaluation based on state features."
+    SOURCES
+        heuristics/external_heuristic.cc
+)
+
+fast_downward_plugin(
     NAME FF_HEURISTIC
     HELP "The FF heuristic (an implementation of the RPG heuristic)"
     SOURCES
