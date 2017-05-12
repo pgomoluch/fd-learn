@@ -1,4 +1,4 @@
-#include "learned_heuristic.h"
+#include "linear_heuristic.h"
 
 #include "../option_parser.h"
 #include "../plugin.h"
@@ -10,11 +10,11 @@
 
 using namespace std;
 
-namespace learned_heuristic {
+namespace linear_heuristic {
 
-LearnedHeuristic::LearnedHeuristic(const options::Options &options)
+LinearHeuristic::LinearHeuristic(const options::Options &options)
     : Heuristic(options) {
-    cout << "Initializing learned heuristic..." << endl;
+    cout << "Initializing linear heuristic..." << endl;
     ifstream in("../heuristic-learner/model.txt");
     if(!in)
         throw 42; // TMP
@@ -24,9 +24,9 @@ LearnedHeuristic::LearnedHeuristic(const options::Options &options)
         model.push_back(d);
 }
 
-LearnedHeuristic::~LearnedHeuristic() {}
+LinearHeuristic::~LinearHeuristic() {}
 
-int LearnedHeuristic::compute_heuristic(const GlobalState &global_state) {
+int LinearHeuristic::compute_heuristic(const GlobalState &global_state) {
     auto features = state_encoder.encode(global_state);
     double result = intercept;
     for(unsigned i=0; i<model.size(); ++i)
@@ -52,9 +52,9 @@ static Heuristic *_parse(OptionParser &parser) {
     if (parser.dry_run())
         return 0;
     else
-        return new LearnedHeuristic(opts);
+        return new LinearHeuristic(opts);
 }
 
-static Plugin<Heuristic> _plugin("learned", _parse);
+static Plugin<Heuristic> _plugin("linear", _parse);
 
 }

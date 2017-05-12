@@ -384,10 +384,10 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
-    NAME LEARNED_HEURISTIC
-    HELP "The learned heuristic"
+    NAME LINEAR_HEURISTIC
+    HELP "The heuristic learned using a linear model"
     SOURCES
-        heuristics/learned_heuristic.cc
+        heuristics/linear_heuristic.cc
     DEPENDS STATE_ENCODER
 )
 
@@ -397,6 +397,15 @@ fast_downward_plugin(
     SOURCES
         heuristics/max_heuristic.cc
     DEPENDS RELAXATION_HEURISTIC
+)
+
+fast_downward_plugin(
+    NAME NEURAL_HEURISTIC
+    HELP "The heuristic learned using a neural network"
+    SOURCES
+        heuristics/neural_heuristic.cc
+        nn/network.cxx
+    DEPENDS STATE_ENCODER
 )
 
 fast_downward_plugin(
