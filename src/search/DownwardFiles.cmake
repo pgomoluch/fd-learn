@@ -80,7 +80,6 @@ fast_downward_plugin(
         search_space.cc
         search_statistics.cc
         segmented_vector.cc
-        state_encoder.cc
         state_id.cc
         state_registry.cc
         successor_generator.cc
@@ -331,10 +330,19 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME STATE_ENCODER
+    HELP "Provides state encoding for learning and evaluation by learned functions."
+    SOURCES
+        state_encoder.cc
+    DEPENDS CONTEXT_ENHANCED_ADDITIVE_HEURISTIC FF_HEURISTIC_F
+)
+
+fast_downward_plugin(
     NAME EXTERNAL_HEURISTIC
     HELP "A heuristic using external process for evaluation based on state features."
     SOURCES
         heuristics/external_heuristic.cc
+    DEPENDS STATE_ENCODER
 )
 
 fast_downward_plugin(
@@ -380,6 +388,7 @@ fast_downward_plugin(
     HELP "The learned heuristic"
     SOURCES
         heuristics/learned_heuristic.cc
+    DEPENDS STATE_ENCODER
 )
 
 fast_downward_plugin(

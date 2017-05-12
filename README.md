@@ -1,3 +1,5 @@
+This is a fork of Fast Downward, extended with mechanisms for machine learning domain-independent heuristic functions. The original content of the file follows.
+
 Fast Downward is a domain-independent planning system.
 
 For documentation and contact information see http://www.fast-downward.org/.
