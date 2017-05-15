@@ -11,11 +11,6 @@ n_samples=$4
 initial_id=$5
 data_dir=$6
 
-#base_path="../../../IPC/14D-woodworking/"
-#dirname="wood"
-#data_dir="wood-data"
-
-
 mkdir ${data_dir}
 mkdir ${data_dir}/labels
 
