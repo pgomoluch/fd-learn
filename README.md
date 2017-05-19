@@ -1,4 +1,8 @@
-This is a fork of Fast Downward, extended with mechanisms for machine learning domain-independent heuristic functions. The original content of the file follows.
+This is a fork of Fast Downward, extended with mechanisms for machine learning domain-independent heuristic functions.
+
+To use functionality based on neural networks, clone also [simple-nn](https://github.com/pgomoluch/simple-nn).
+
+The original Fast Downward description follows.
 
 Fast Downward is a domain-independent planning system.
 
