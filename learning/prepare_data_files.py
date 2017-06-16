@@ -16,7 +16,7 @@ def write_vector(vector, path):
         out.write('{}\n'.format(i))
             
 
-features_train, features_test, labels_train, labels_test = plan_reader.read()
+features_train, features_test, labels_train, labels_test = plan_reader.read(columns=columns)
 
 write_matrix(features_train, 'features_train.txt')
 write_matrix(features_test, 'features_test.txt')

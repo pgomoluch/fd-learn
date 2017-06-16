@@ -11,22 +11,16 @@ using namespace std;
 namespace neural_heuristic {
 
 NeuralHeuristic::NeuralHeuristic(const options::Options &options)
-    : Heuristic(options) {
+    : Heuristic(options), network("network.txt") {
     cout << "Initializing neural heuristic..." << endl;
-    network = new Network({5,5,3});
-    network->load("../heuristic-learner/nn553.txt");
-}
-
-NeuralHeuristic::~NeuralHeuristic() {
-    delete network;
 }
 
 int NeuralHeuristic::compute_heuristic(const GlobalState &global_state) {
     auto features = state_encoder.encode(global_state);
-    double result = network->evaluate(features);
+    double result = network.evaluate(features);
     
-    if(result > 2000000000.0) // I would comapre to max(int), but wouldn't it bring precision issues?
-        return 2147483647;
+    //if(result > 2000000000.0)
+    //    return 2147483647;
     return result;
 }
 

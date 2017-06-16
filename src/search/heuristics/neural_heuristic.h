@@ -14,10 +14,9 @@ protected:
     virtual int compute_heuristic(const GlobalState &state);
 public:
     NeuralHeuristic(const options::Options &options);
-    ~NeuralHeuristic();
 private:
     StateEncoder state_encoder;
-    Network *network;
+    Network network;
 };
 
 }
