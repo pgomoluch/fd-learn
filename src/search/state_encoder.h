@@ -19,6 +19,13 @@ private:
     cea_heuristic::ContextEnhancedAdditiveHeuristic ceah;
     std::vector<int> domain_sizes;
     std::vector<int> domain_quantiles;
+    
+    static int distance(const GlobalState &state);
+    static int applicable_operator_count(const GlobalState &state);
+    static int non_diverging_operator_count(const GlobalState &state);
+    static bool diverges_from_goal(const GlobalOperator &op, const GlobalState &state);
+    static bool defines_goal(int var);
+    static bool conjunct_satisfied(int var, const GlobalState &state);
 };
 
 #endif

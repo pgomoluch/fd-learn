@@ -58,7 +58,6 @@ fast_downward_plugin(
         equivalence_relation.cc
         evaluation_context.cc
         evaluation_result.cc
-        features.cc
         global_operator.cc
         globals.cc
         global_state.cc
