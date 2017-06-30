@@ -3,6 +3,8 @@
 
 #include "ff_heuristic.h"
 
+#include <map>
+
 namespace ff_heuristic {
 
 class FFHeuristicF : public FFHeuristic {
@@ -10,12 +12,18 @@ class FFHeuristicF : public FFHeuristic {
 public:
     FFHeuristicF(const options::Options &options);
     std::vector<double> get_features() { return features; }
+    std::vector<double> get_dd_features() { return dd_features; }
 
 protected:
     virtual int compute_heuristic(const GlobalState &global_state) override;
 
 private:
     std::vector<double> features;
+    std::vector<double> dd_features; // domain-dependent features
+    
+    std::map<std::string, int> schema_map;
+    
+    static std::string get_schema_name(OperatorProxy op);
     //std::set<Proposition> delete_effects;
 };
 
