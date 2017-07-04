@@ -17,7 +17,8 @@ public:
 protected:
     void mark_preferred_operators_and_relaxed_plan_f(
         const State &state, Proposition *goal,
-        std::vector<UnaryOperator*> supported_ops = std::vector<UnaryOperator*>());
+        std::vector<UnaryOperator*> supported_ops = std::vector<UnaryOperator*>(),
+        int depth = 0);
     virtual int compute_heuristic(const GlobalState &global_state) override;
 
 private:
@@ -26,6 +27,7 @@ private:
     std::vector<std::vector<bool>> pairwise_features;
     
     std::map<std::string, int> schema_map;
+    int max_depth;
     
     static std::string get_schema_name(OperatorProxy op);
     //std::set<Proposition> delete_effects;

@@ -28,7 +28,8 @@ FFHeuristicF::FFHeuristicF(const Options &opts) : FFHeuristic(opts) {
 // We allowed massive code duplication to prevent any changes to the basic FF
 // and thus enable a fair comparison.
 void FFHeuristicF::mark_preferred_operators_and_relaxed_plan_f(
-    const State &state, Proposition *goal, vector<UnaryOperator*> supported_ops) {
+    const State &state, Proposition *goal, vector<UnaryOperator*> supported_ops,
+    int depth) {
     if (!goal->marked) { // Only consider each subgoal once.
         goal->marked = true;
         UnaryOperator *unary_op = goal->reached_by;
@@ -36,7 +37,7 @@ void FFHeuristicF::mark_preferred_operators_and_relaxed_plan_f(
             supported_ops.push_back(unary_op);
             for (size_t i = 0; i < unary_op->precondition.size(); ++i)
                 mark_preferred_operators_and_relaxed_plan_f(
-                    state, unary_op->precondition[i], supported_ops);
+                    state, unary_op->precondition[i], supported_ops, depth+1);
             int operator_no = unary_op->operator_no;
             if (operator_no != -1) {
                 // This is not an axiom.
@@ -66,6 +67,11 @@ void FFHeuristicF::mark_preferred_operators_and_relaxed_plan_f(
                 }
             }
         }
+        else
+        {
+            if (depth > max_depth)
+               max_depth = depth; 
+        }
     }
 }
 
@@ -78,6 +84,7 @@ int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
     for(int i = 0; i < schema_no; ++i)
         for(int j = 0; j < schema_no; ++j)
             pairwise_features[i][j] = false;
+    max_depth = 0;
     
     State state = convert_global_state(global_state);
     int h_add = compute_add_and_ff(state);
@@ -114,6 +121,8 @@ int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
     if(operator_count > 0)
         avg_ignored_effect_count = (double)ignored_effect_count / operator_count;
     features.push_back(avg_ignored_effect_count);
+    
+    features.push_back((double)max_depth); // the number of layers in the graph
     
     dd_features.insert(dd_features.end(), schema_count.begin(), schema_count.end());
     for (auto row: pairwise_features)
