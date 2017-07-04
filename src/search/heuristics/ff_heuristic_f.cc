@@ -14,7 +14,10 @@ FFHeuristicF::FFHeuristicF(const Options &opts) : FFHeuristic(opts) {
     {
         string name = get_schema_name(op);
         if (schema_map.count(name) == 0)
-            schema_map[name] = schema_map.size();
+        {
+            int old_size = schema_map.size();
+            schema_map[name] = old_size;
+        }
     }
     int schema_no = schema_map.size();
     for(int i = 0; i < schema_no; ++i)

@@ -12,7 +12,7 @@ StateEncoder::StateEncoder() : ffh(Heuristic::default_options()), ceah(Heuristic
     domain_sizes = g_variable_domain;
     sort(domain_sizes.begin(), domain_sizes.end());
     domain_quantiles.reserve(N_DOMAIN_QUANTILES);
-    for(unsigned i=0; i < N_DOMAIN_QUANTILES; ++i)
+    for(unsigned i=1; i < N_DOMAIN_QUANTILES; ++i)
     {
         unsigned id = i * domain_sizes.size() / N_DOMAIN_QUANTILES;
         domain_quantiles.push_back(domain_sizes[id]);
