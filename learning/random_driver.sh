@@ -17,7 +17,7 @@ mkdir ${data_dir}/labels
 counter=0
 
 # Translate and preprocess
-../fast-downward.py --build="release64" --translate --preprocess ${base_path}domain.pddl ${base_path}${problem}.pddl
+../fast-downward.py --build="release64" --translate --preprocess ${base_path}/domain.pddl ${base_path}/${problem}.pddl
 # Make a copy for the altered version of the problem
 cp output output2
 

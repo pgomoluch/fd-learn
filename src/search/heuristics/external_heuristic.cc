@@ -16,7 +16,7 @@ using namespace std;
 
 namespace external_heuristic {
 
-const char *socket_path = "../heuristic-learner/fd-learn-socket";
+const char *socket_path = "/tmp/fd-learn-socket";
 
 ExternalHeuristic::ExternalHeuristic(const options::Options &options)
     : Heuristic(options) {

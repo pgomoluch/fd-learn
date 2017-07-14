@@ -6,16 +6,20 @@ from sklearn.model_selection import train_test_split
 
 
 default_dirs = [\
-    'data/park-4-6',
-    'data/park-5-7',
-    'data/park-5-8',
-    'data/park-6-8',
+    #'data/park-4-6',
+    #'data/park-5-7',
+    #'data/park-5-8',
+    #'data/park-6-8',
     'data/transport1-10-1000-2-100-2-4',
-    'data/wood-p2-rw10000',
+    'data/transport1-10-1000-2-100-2-4-B',
+    'data/transport1-10-1000-2-100-2-4-C',
+    #'data/wood-p2-rw10000',
 ]
 
-default_columns = [6,9,11,12,13] # Hamming distance and FF derived features
-
+#default_columns = [5,8,10,11,12,13] # v006: Hamming distance and FF derived features
+#default_columns = [5,8,10,11,12,13,14,15,16] # v007: v006 + single
+#default_columns = [5,8,10,11,12,13] + range(17,17+9) # v008: v006 + pair
+default_columns = [5,8,10,11,12,13,14,15,16] + range(17,17+9) #v009: v006 + single + pair
 
 def read(dirs=default_dirs, columns=default_columns, test_size=0.1):
 
