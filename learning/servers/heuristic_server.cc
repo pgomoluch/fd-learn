@@ -86,9 +86,9 @@ int HeuristicServer::serve()
                 break;
             }
             double *features = (double*)buf;
-            for (int i = 0; i < n_features; ++i)
-                cout << features[i] << " ";
-            cout << endl;
+            //for (int i = 0; i < n_features; ++i)
+            //    cout << features[i] << " ";
+            //cout << endl;
             double result = evaluate(features);
             int n_written = 0;
             while(n_written < sizeof(double))

@@ -1,5 +1,9 @@
 *.pyc
 builds/
+learning/data
 output
 output.sas
 sas_plan
+features.txt
+labels.txt
+states.txt

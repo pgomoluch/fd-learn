@@ -3,7 +3,8 @@
 # Specific configuration set by the following variables.
 
 ipc_domain="../../../IPC/own-transport/domain.pddl"
-ipc_generator_command="python ../../../IPC/own-transport/generator14L/city-generator.py 10 1000 2 100 2 4"
+#ipc_generator_command="python ../../../IPC/own-transport/generator14L/city-generator.py 10 1000 2 100 2 4"
+ipc_generator_command="python ../../../IPC/own-transport/generator14L/three-cities-generator.py 4 1000 2 100 2 4"
 
 data_dir=$4
 
