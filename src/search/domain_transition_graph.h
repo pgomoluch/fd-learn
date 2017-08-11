@@ -112,9 +112,14 @@ namespace cea_heuristic {
 class ContextEnhancedAdditiveHeuristic;
 }
 
+namespace cea_heuristic_f {
+class ContextEnhancedAdditiveHeuristicF;
+}
+
 class DomainTransitionGraph {
     friend class cg_heuristic::CGHeuristic;
     friend class cea_heuristic::ContextEnhancedAdditiveHeuristic;
+    friend class cea_heuristic_f::ContextEnhancedAdditiveHeuristicF;
     friend class DTGFactory;
 
     int var;

@@ -46,9 +46,17 @@ vector<double> StateEncoder::encode(const GlobalState &state)
     vector<double> ff_features = ffh.get_features();
     result.insert(result.end(), ff_features.begin(), ff_features.end());
     
+    // CEA derived features
+    vector<double> cea_features = ceah.get_features();
+    result.insert(result.end(), cea_features.begin(), cea_features.end());
+    
     // Domain-dependent FF derived features
     vector<double> ff_dd_features = ffh.get_dd_features();
     result.insert(result.end(), ff_dd_features.begin(), ff_dd_features.end());
+    
+    // Domain-dependent CEA derived features
+    vector<double> cea_dd_features = ceah.get_dd_features();
+    result.insert(result.end(), cea_dd_features.begin(), cea_dd_features.end());
     
     return result;
 }

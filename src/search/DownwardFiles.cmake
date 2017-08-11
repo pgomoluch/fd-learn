@@ -313,6 +313,15 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME CONTEXT_ENHANCED_ADDITIVE_HEURISTIC_F
+    HELP "A variant of the context-enhanced additive heuristic for feature extraction."
+    SOURCES
+        heuristics/cea_heuristic_f.cc
+    DEPENDS DOMAIN_TRANSITION_GRAPH
+)
+
+
+fast_downward_plugin(
     NAME CG_HEURISTIC
     HELP "The causal graph heuristic"
     SOURCES heuristics/cg_heuristic.cc
