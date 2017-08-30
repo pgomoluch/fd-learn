@@ -30,6 +30,8 @@ class ContextEnhancedAdditiveHeuristicF : public Heuristic {
     std::vector<std::vector<bool>> pairwise_features;    
     std::map<std::string, int> schema_map;
     int max_graph_depth;
+    int transition_count;
+    int ignored_effect_count;
 
     LocalProblem *get_local_problem(int var_no, int value);
     LocalProblem *build_problem_for_variable(int var_no) const;

@@ -8,6 +8,7 @@
 #include "../plugin.h"
 #include "../task_tools.h"
 
+#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <sstream>
@@ -481,9 +482,22 @@ void ContextEnhancedAdditiveHeuristicF::compute_features(LocalProblem *problem, 
             *it = false;
     
     max_graph_depth = 0;
+    transition_count = 0;
+    ignored_effect_count = 0;
     
     set_features_from_graph(problem, node, state, vector<OperatorProxy>(), 0);
     
+    features.push_back((double)transition_count);
+    features.push_back((double)ignored_effect_count);
+    if (transition_count)
+    {
+        double avg_ignored_effect_count = (double)ignored_effect_count / transition_count;
+        features.push_back(avg_ignored_effect_count);
+    }
+    else
+    {
+        features.push_back(0.0);
+    }
     features.push_back((double)max_graph_depth);
 }
 
@@ -502,6 +516,8 @@ void ContextEnhancedAdditiveHeuristicF::set_features_from_graph(LocalProblem *pr
             string schema_name = get_schema_name(op);
             int schema_id = schema_map[schema_name];
             schema_count[schema_id] += 1.0;
+            ++transition_count;
+            ignored_effect_count += op.get_effects().size() - 1;
             
             // Update the pairwise features matrix
             for (OperatorProxy sop: supported_ops)
