@@ -127,10 +127,37 @@ int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
     
     features.push_back((double)max_depth); // the number of layers in the graph
     
+    // Domain-independent extract from schama count: quartiles
+    vector<double> schema_count_copy(schema_count.begin(), schema_count.end());
+    sort(schema_count_copy.begin(), schema_count_copy.end());
+    for (int i = 1; i < 4; ++i)
+    {
+        int quartile = schema_count_copy[i * schema_count_copy.size() / 4];
+        features.push_back((double)quartile);
+    }
+    
+    // Domain-independent extract from the pairwise features matrix:
+    // number of nonzero elements and symmetric pairs
+    int nonzero_elements = 0;
+    int symmetric_pairs = 0;
+    int size = pairwise_features.size();
+    for (int i = 0; i < size; ++i)
+        for (int j = 0; j < size; ++j)
+        {
+            if (pairwise_features[i][j])
+            {
+                ++nonzero_elements;
+                if (j >= i && pairwise_features[j][i])
+                    ++symmetric_pairs;
+            }
+        }
+    features.push_back((double)nonzero_elements);
+    features.push_back((double)symmetric_pairs);
+    
     dd_features.insert(dd_features.end(), schema_count.begin(), schema_count.end());
     for (auto row: pairwise_features)
         for (bool e: row)
-            if(e)
+            if (e)
                 dd_features.push_back(1.0);
             else
                 dd_features.push_back(0.0);
