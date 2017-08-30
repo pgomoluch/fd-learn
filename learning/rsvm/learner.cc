@@ -10,21 +10,23 @@ using namespace std;
 using namespace dlib;
 
 
-const int N_FEATURES = 6; //18
+const int N_FEATURES = 3;
 //const int FEATURE_IDS[] = {5,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}; // FFF domain dependent
-const int FEATURE_IDS[] = {5,8,10,11,12,13}; // FFF domain independent
+//const int FEATURE_IDS[] = {5,8,10,11,12,13}; // FFF domain independent (truncated)
+const int FEATURE_IDS[] = {5,9,14}; // CEA domain independent (truncated)
 const double C = 1.0;
-const string DATA_PATHS[] = {
+const std::vector<string> DATA_PATHS = {
     "../data/transport1-10-1000-2-100-2-4-B/",
+    "../data/transport-like-D12/",
+    "../data/transport-like-D22/",
     "../data/park-4-6-B/",
     "../data/park-5-7-B/",
     "../data/park-5-8-B/",
     "../data/park-6-8-B/",
-    "../data/wood-p2-rw10000-B/",
-    "../data/transport-like-D12/",
-    "../data/transport-like-D22/",
-    "../data/transport-like-D06-A-CG/"
+    "../data/elevators-12-3/",
+    "../data/no-mystery-like-M22/"
 };
+const int DATA_LIMITS[] = {7000, 7000, 7000, 5000, 5000, 5000, 5000, 20000, 20000};
 const string MODEL_FILE = "model.txt";
 
 
@@ -106,12 +108,15 @@ double pair_rank(decision_function<kernel_type> &rank, std::vector<double> point
 void load_data(ranking_pair<sample_type> &data)
 {
     int sample_count = 0;
-    for (const string &path: DATA_PATHS)
+    //for (const string &path: DATA_PATHS)
+    for (int d = 0; d < DATA_PATHS.size(); ++d)
     {
+        int batch_sample_count = 0;
+        int batch_pair_count = 0;
         std::vector<string> filenames;
         DIR *dir;
         struct dirent *ent;
-        if ((dir = opendir((path + "features/").c_str())) != NULL)
+        if ((dir = opendir((DATA_PATHS[d] + "features/").c_str())) != NULL)
         {
             while ((ent = readdir(dir)) != NULL)
                 filenames.push_back(ent->d_name);
@@ -122,9 +127,11 @@ void load_data(ranking_pair<sample_type> &data)
 
         for (string f: filenames)
         {
+            if (batch_sample_count > DATA_LIMITS[d])
+                break;
             
-            ifstream feature_file(path + "features/" + f);
-            ifstream label_file(path + "labels/" + f);
+            ifstream feature_file(DATA_PATHS[d] + "features/" + f);
+            ifstream label_file(DATA_PATHS[d] + "labels/" + f);
             
             if(!feature_file || !label_file)
             {
@@ -158,6 +165,7 @@ void load_data(ranking_pair<sample_type> &data)
                 
                 //global_features.push_back(record);
                 ++sample_count;
+                ++batch_sample_count;
             }
             
             feature_file.close();
@@ -180,10 +188,13 @@ void load_data(ranking_pair<sample_type> &data)
                     sample_type sample1(array1);
                     
                     data.relevant.push_back(sample);
-                    data.nonrelevant.push_back(sample1);           
+                    data.nonrelevant.push_back(sample1);
+                    ++batch_pair_count;
                 }
             }
         }
+        cout << "Data points from " << DATA_PATHS[d] << ": " << batch_sample_count
+            << ". Pairs: " << batch_pair_count << endl;
     }
     cout << "Total data points: " << sample_count << endl;
 }
