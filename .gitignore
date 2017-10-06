@@ -1,6 +1,11 @@
 *.pyc
+*.out
 builds/
 learning/data
+learning/model.txt
+learning/network.txt
+learning/rsvm/build
+learning/tf-model
 output
 output.sas
 sas_plan
