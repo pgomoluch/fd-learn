@@ -10,10 +10,12 @@ using namespace std;
 using namespace dlib;
 
 
-const int N_FEATURES = 3;
-//const int FEATURE_IDS[] = {5,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25}; // FFF domain dependent
+const int N_FEATURES = 11;
 //const int FEATURE_IDS[] = {5,8,10,11,12,13}; // FFF domain independent (truncated)
-const int FEATURE_IDS[] = {5,9,14}; // CEA domain independent (truncated)
+//const int FEATURE_IDS[] = {5,9,19,20,21,22}; // CEA domain independent (truncated)
+const int FEATURE_IDS[] = {5,8,10,11,12,13,14,15,16,17,18}; // FF DI
+//const int FEATURE_IDS[] = {5,9,19,20,21,22,23,24,25,26,27}; // CEA DI
+//const int FEATURE_IDS[] = {5,8,9,10,11,12,13,14,15,16,17,18}; // FF DI + CEA
 const double C = 1.0;
 const std::vector<string> DATA_PATHS = {
     "../data/transport1-10-1000-2-100-2-4-B/",
@@ -27,6 +29,7 @@ const std::vector<string> DATA_PATHS = {
     "../data/no-mystery-like-M22/"
 };
 const int DATA_LIMITS[] = {7000, 7000, 7000, 5000, 5000, 5000, 5000, 20000, 20000};
+//const int DATA_LIMITS[] = {5000, 5000, 5000, 5000, 20000, 20000};
 const string MODEL_FILE = "model.txt";
 
 
@@ -113,6 +116,7 @@ void load_data(ranking_pair<sample_type> &data)
     {
         int batch_sample_count = 0;
         int batch_pair_count = 0;
+        int batch_problem_count = 0;
         std::vector<string> filenames;
         DIR *dir;
         struct dirent *ent;
@@ -124,9 +128,11 @@ void load_data(ranking_pair<sample_type> &data)
         }
         
         sort(filenames.begin(), filenames.end());
-
+        
+        bool false_dead_end;
         for (string f: filenames)
         {
+            false_dead_end = false;
             if (batch_sample_count > DATA_LIMITS[d])
                 break;
             
@@ -163,14 +169,26 @@ void load_data(ranking_pair<sample_type> &data)
                 features.push_back(record);
                 labels.push_back((double)i);
                 
+
+                for (double d: record)
+                {
+                    if (d > 10000000.0)
+                        false_dead_end = true;
+                }
+                
                 //global_features.push_back(record);
-                ++sample_count;
-                ++batch_sample_count;
+                //++sample_count;
+                //++batch_sample_count;
             }
             
             feature_file.close();
             label_file.close();
+            ++batch_problem_count;
             
+            if (false_dead_end) continue;
+            
+            sample_count += labels.size();
+            batch_sample_count += labels.size();
             // Relies on the ordering of states: from the initial one to the goal
             for (int i = 0; i < labels.size(); ++i)
             {
@@ -194,7 +212,7 @@ void load_data(ranking_pair<sample_type> &data)
             }
         }
         cout << "Data points from " << DATA_PATHS[d] << ": " << batch_sample_count
-            << ". Pairs: " << batch_pair_count << endl;
+            << ". Pairs: " << batch_pair_count << ". Problems: " << batch_problem_count << endl;
     }
     cout << "Total data points: " << sample_count << endl;
 }

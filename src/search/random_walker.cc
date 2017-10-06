@@ -4,9 +4,27 @@
 #include "utils/rng.h"
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <stdlib.h>
 using namespace std;
+
+const bool record_intermediate = true;
+const string record_prefix = "rw";
+
+void record_state(int id, const GlobalState &state)
+{
+    string filename = record_prefix + to_string(id);
+    ofstream file(filename);
+    
+    auto values = state.get_values();
+    file << "begin_state" << endl;
+    for(auto it=values.begin(); it!=values.end(); ++it)
+        file << *it << endl;
+    file << "end_state" << endl;
+    
+    file.close();
+}
 
 int main(int argc, char *argv[])
 {   
@@ -51,6 +69,8 @@ int main(int argc, char *argv[])
         g_successor_generator->generate_applicable_ops(state, applicable_operators);
         state = state_registry.get_successor_state(state,
             *applicable_operators[(*g_rng())(applicable_operators.size())]);
+        if (record_intermediate)
+            record_state(i, state);
     }
     
     auto values = state.get_values();
