@@ -58,7 +58,10 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
     }    
     double result;// = *((double*)buf);
     memcpy(&result, buf, sizeof(double));
-        
+
+    for (auto op: state_encoder.get_preferred_operators())
+        set_preferred(op);
+
     if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
         return 2147483647;
     return result;
@@ -72,7 +75,7 @@ static Heuristic *_parse(OptionParser &parser) {
     parser.document_property("admissible", "no");
     parser.document_property("consistent", "no");
     parser.document_property("safe", "no");
-    parser.document_property("preferred operators", "no");
+    parser.document_property("preferred operators", "yes");
 
     Heuristic::add_options_to_parser(parser);
     Options opts = parser.parse();

@@ -37,8 +37,12 @@ vector<double> StateEncoder::encode(const GlobalState &state)
     result.push_back(non_diverging_operator_count(state));
     
     EvaluationContext context(state);
+
     // FF heuristic
-    result.push_back(context.get_result(&ffh).get_h_value());
+    const EvaluationResult &ffh_result = context.get_result(&ffh);
+    result.push_back(ffh_result.get_h_value());
+    preferred_operators = move(ffh_result.get_preferred_operators());
+    
     // CEA heuristic
     result.push_back(context.get_result(&ceah).get_h_value());
     
@@ -59,6 +63,11 @@ vector<double> StateEncoder::encode(const GlobalState &state)
     result.insert(result.end(), cea_dd_features.begin(), cea_dd_features.end());
     
     return result;
+}
+
+const vector<const GlobalOperator *> &StateEncoder::get_preferred_operators()
+{
+    return preferred_operators;
 }
 
 int StateEncoder::distance(const GlobalState &state)

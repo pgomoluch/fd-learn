@@ -14,11 +14,13 @@ class StateEncoder
 public:
     StateEncoder();
     std::vector<double> encode(const GlobalState &state);
+    const vector<const GlobalOperator *> &get_preferred_operators();
 private:
     ff_heuristic::FFHeuristicF ffh;
     cea_heuristic_f::ContextEnhancedAdditiveHeuristicF ceah;
     std::vector<int> domain_sizes;
     std::vector<int> domain_quantiles;
+    std::vector<const GlobalOperator*> preferred_operators;
     
     static int distance(const GlobalState &state);
     static int applicable_operator_count(const GlobalState &state);
