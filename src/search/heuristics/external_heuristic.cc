@@ -62,8 +62,15 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
     for (auto op: state_encoder.get_preferred_operators())
         set_preferred(op);
 
-    if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
-        return 2147483647;
+    //if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
+    //    return 2147483647;
+
+    if(state_encoder.is_dead_end())
+    {
+        cout << "##### DEAD_END!" << endl;
+        return DEAD_END;
+    }
+    
     return result;
 }
 

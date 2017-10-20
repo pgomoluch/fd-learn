@@ -13,6 +13,8 @@ public:
     FFHeuristicF(const options::Options &options);
     std::vector<double> get_features() { return features; }
     std::vector<double> get_dd_features() { return dd_features; }
+    
+    static bool is_dead_end(int value) { return value == DEAD_END; }
 
 protected:
     void mark_preferred_operators_and_relaxed_plan_f(

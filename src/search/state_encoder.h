@@ -15,12 +15,14 @@ public:
     StateEncoder();
     std::vector<double> encode(const GlobalState &state);
     const vector<const GlobalOperator *> &get_preferred_operators();
+    bool is_dead_end() { return ff_dead_end; }
 private:
     ff_heuristic::FFHeuristicF ffh;
     cea_heuristic_f::ContextEnhancedAdditiveHeuristicF ceah;
     std::vector<int> domain_sizes;
     std::vector<int> domain_quantiles;
     std::vector<const GlobalOperator*> preferred_operators;
+    bool ff_dead_end;
     
     static int distance(const GlobalState &state);
     static int applicable_operator_count(const GlobalState &state);
