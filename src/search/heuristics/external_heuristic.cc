@@ -16,10 +16,11 @@ using namespace std;
 
 namespace external_heuristic {
 
+const int INITIAL_STATE_VALUE = 1000000;
 const char *socket_path = "/tmp/fd-learn-socket";
 
 ExternalHeuristic::ExternalHeuristic(const options::Options &options)
-    : Heuristic(options) {
+    : Heuristic(options), is_scaling_initialized(false) {
     cout << "Initializing external heuristic..." << endl;
     fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(fd == -1)
@@ -65,11 +66,20 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
     //if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
     //    return 2147483647;
 
-    if(state_encoder.is_dead_end())
+    if (state_encoder.is_dead_end())
     {
         cout << "##### DEAD_END!" << endl;
         return DEAD_END;
     }
+
+    /*if (is_scaling_initialized)
+        result *= scaling_factor;
+    else
+    {
+        scaling_factor = INITIAL_STATE_VALUE / result;
+        result = INITIAL_STATE_VALUE;
+        is_scaling_initialized = true;
+    }*/
     
     return result;
 }

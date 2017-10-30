@@ -15,7 +15,7 @@ namespace linear_heuristic {
 LinearHeuristic::LinearHeuristic(const options::Options &options)
     : Heuristic(options) {
     cout << "Initializing linear heuristic..." << endl;
-    ifstream in("../heuristic-learner/model.txt");
+    ifstream in("model.txt");
     if(!in)
         throw 42; // TMP
     in >> intercept;

@@ -17,6 +17,8 @@ public:
 private:
     StateEncoder state_encoder;
     int fd;
+    double scaling_factor;
+    bool is_scaling_initialized;
 };
 
 }
