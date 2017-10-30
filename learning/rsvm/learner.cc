@@ -11,11 +11,11 @@ using namespace dlib;
 
 
 const int N_FEATURES = 11;
-//const int FEATURE_IDS[] = {5,8,10,11,12,13}; // FFF domain independent (truncated)
-//const int FEATURE_IDS[] = {5,9,19,20,21,22}; // CEA domain independent (truncated)
+
 const int FEATURE_IDS[] = {5,8,10,11,12,13,14,15,16,17,18}; // FF DI
 //const int FEATURE_IDS[] = {5,9,19,20,21,22,23,24,25,26,27}; // CEA DI
 //const int FEATURE_IDS[] = {5,8,9,10,11,12,13,14,15,16,17,18}; // FF DI + CEA
+
 const double C = 1.0;
 const std::vector<string> DATA_PATHS = {
     "../data/transport1-10-1000-2-100-2-4-B/",
@@ -29,7 +29,6 @@ const std::vector<string> DATA_PATHS = {
     "../data/no-mystery-like-M22/"
 };
 const int DATA_LIMITS[] = {7000, 7000, 7000, 5000, 5000, 5000, 5000, 20000, 20000};
-//const int DATA_LIMITS[] = {5000, 5000, 5000, 5000, 20000, 20000};
 const string MODEL_FILE = "model.txt";
 
 
@@ -80,6 +79,20 @@ int main()
     //            << point_i << "  "
     //            << point_j << endl;
     //    }
+    
+    
+    for (int i = 0; i < N_FEATURES; ++i)
+    {
+        double sample_array[N_FEATURES * 2] = {0.0};
+        sample_array[i] = 10.0;
+        sample_type sample(sample_array);
+        cout << "w_" << FEATURE_IDS[i] << ": " << rank(sample) / 10.0 << " ";
+        
+        double sample_array2[N_FEATURES * 2] = {0.0};
+        sample_array2[N_FEATURES+i] = 20.0;
+        sample_type sample2(sample_array2);
+        cout << "(" << rank(sample2) / -20.0 << ")" << endl;
+    }
     
     return 0;
 }

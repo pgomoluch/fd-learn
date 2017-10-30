@@ -9,7 +9,7 @@ using namespace std;
 
 
 const char *MODEL_PATH = "model.txt";
-const int N_FEATURES = 6;//18;
+const int N_FEATURES = 11;
 const double RANK_MULTIPLYER = 10.0;
 
 typedef dlib::matrix<double,N_FEATURES*2,1> sample_type;
