@@ -43,7 +43,7 @@ vector<double> StateEncoder::encode(const GlobalState &state)
     const int ffh_value = ffh_result.get_h_value();
     result.push_back(ffh_value);
     preferred_operators = move(ffh_result.get_preferred_operators());
-    ff_dead_end = ff_heuristic::FFHeuristicF::is_dead_end(ffh_value);
+    ff_dead_end = ff_heuristic_f::FFHeuristicF::is_dead_end(ffh_value);
     
     // CEA heuristic
     result.push_back(context.get_result(&ceah).get_h_value());

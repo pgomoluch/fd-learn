@@ -17,7 +17,7 @@ public:
     const vector<const GlobalOperator *> &get_preferred_operators();
     bool is_dead_end() { return ff_dead_end; }
 private:
-    ff_heuristic::FFHeuristicF ffh;
+    ff_heuristic_f::FFHeuristicF ffh;
     cea_heuristic_f::ContextEnhancedAdditiveHeuristicF ceah;
     std::vector<int> domain_sizes;
     std::vector<int> domain_quantiles;

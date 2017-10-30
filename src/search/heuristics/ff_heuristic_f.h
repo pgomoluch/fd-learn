@@ -5,9 +5,11 @@
 
 #include <map>
 
-namespace ff_heuristic {
+namespace ff_heuristic_f {
+using Proposition = relaxation_heuristic::Proposition;
+using UnaryOperator = relaxation_heuristic::UnaryOperator;
 
-class FFHeuristicF : public FFHeuristic {
+class FFHeuristicF : public ff_heuristic::FFHeuristic {
 
 public:
     FFHeuristicF(const options::Options &options);

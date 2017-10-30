@@ -1,13 +1,14 @@
 #include "ff_heuristic_f.h"
 
 #include "../option_parser.h"
+#include "../plugin.h"
 #include "../task_tools.h"
 
 #include <sstream>
 
 using namespace std;
 
-namespace ff_heuristic {
+namespace ff_heuristic_f {
 
 FFHeuristicF::FFHeuristicF(const Options &opts) : FFHeuristic(opts) {
     for(auto op: task_proxy.get_operators())
@@ -163,6 +164,7 @@ int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
                 dd_features.push_back(0.0);
     
     return h_ff;
+    //return operator_count;
     /*
     features.clear();
     
@@ -183,5 +185,29 @@ string FFHeuristicF::get_schema_name(OperatorProxy op)
     stream >> base_name;
     return base_name;
 }
+
+static Heuristic *_parse(OptionParser &parser) {
+    parser.document_synopsis("FF heuristic altered for feature extraction.", "See also Synergy.");
+    parser.document_language_support("action costs", "supported");
+    parser.document_language_support("conditional effects", "supported");
+    parser.document_language_support(
+        "axioms",
+        "supported (in the sense that the planner won't complain -- "
+        "handling of axioms might be very stupid "
+        "and even render the heuristic unsafe)");
+    parser.document_property("admissible", "no");
+    parser.document_property("consistent", "no");
+    parser.document_property("safe", "yes for tasks without axioms");
+    parser.document_property("preferred operators", "yes");
+
+    Heuristic::add_options_to_parser(parser);
+    Options opts = parser.parse();
+    if (parser.dry_run())
+        return 0;
+    else
+        return new FFHeuristicF(opts);
+}
+
+static Plugin<Heuristic> _plugin("fff", _parse);
 
 }
