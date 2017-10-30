@@ -12,6 +12,9 @@ ipc_domain="../../../IPC/own-elevators/domain.pddl"
 ipc_generator_command1="../../../IPC/own-elevators/generator/generate_elevators 3 3 1 1 1 12 4 1 2 4 4"
 ipc_generator_command2="../../../IPC/own-elevators/generator/generate_pddl 12 12 1 3 3 1 1 1"
 
+#ipc_generator_command1="../../../IPC/own-elevators/generator/generate_elevators 3 3 1 1 1 12 4 2 2 4 4"
+#ipc_generator_command2="../../../IPC/own-elevators/generator/generate_pddl 12 12 1 3 3 1 1 1"
+
 generated_problem_file="p12_3_1.pddl"
 
 data_dir=$3

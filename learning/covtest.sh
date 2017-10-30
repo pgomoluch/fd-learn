@@ -6,11 +6,15 @@ base_counter=0
 counter=0
 results=()
 n_states=()
+plan_costs=()
+search_times=()
 for p in $1/p*.pddl
 do
     base_counter=$((base_counter+1))
     echo "Trying ${p}..."
     fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p --search $2"
+    # With preferred operators:
+    #fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p --heuristic h=external() --search eager_greedy([h],preferred=[h])"
     echo $fd_command
     timeout $3 $fd_command > covtest-tmp-result
     if [ $? -eq 0 ]
@@ -19,15 +23,27 @@ do
         results=(${results[@]} 1)
         n_state=`awk '/Generated [0-9]+ state/ {print $2}' covtest-tmp-result`
         n_states=(${n_states[@]} $n_state)
+        plan_cost=`awk '/Plan cost: [0-9]+/ {print $3}' covtest-tmp-result`
+        plan_costs=(${plan_costs[@]} $plan_cost)
+        search_time=`awk '/Search time: [\.0-9]+s/ {print $3}' covtest-tmp-result`
+        search_times=(${search_times[@]} $search_time)
         echo "Solved ${p}."
     else
         echo "Failed ${p}."
         results=(${results[@]} 0)
         n_states=(${n_states[@]} "F")
+        plan_costs=(${plan_costs[@]} "F")
+        search_times=(${search_times[@]} "F")
     fi
 done
+echo "RESULTS:"
 echo ${results[@]}
+echo "GENERATED STATES:"
 echo ${n_states[@]}
+echo "PLAN COSTS:"
+echo ${plan_costs[@]}
+echo "SEARCH TIMES:"
+echo ${search_times[@]}
 echo "Solved ${counter} out of ${base_counter}."
 
 rm covtest-tmp-result features.txt labels.txt states.txt output output.sas
