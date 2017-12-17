@@ -273,6 +273,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME LEARNING_SEARCH
+    HELP "Learning search algorithm"
+    SOURCES
+        search_engines/learning_search.cc
+    DEPENDS SEARCH_COMMON
+)
+
+fast_downward_plugin(
     NAME LP_SOLVER
     HELP "Interface to an LP solver"
     SOURCES
