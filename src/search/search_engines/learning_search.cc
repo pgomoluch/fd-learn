@@ -199,7 +199,13 @@ static SearchEngine *_parse(OptionParser &parser) {
 
     LearningSearch *engine = nullptr;
     if (!parser.dry_run()) {
-        opts.set("open", search_common::create_greedy_open_list_factory(opts));
+        //opts.set("open", search_common::create_greedy_open_list_factory(opts));
+        // For now we only support single evaluator
+        const vector<ScalarEvaluator*> &evals =
+            opts.get_list<ScalarEvaluator *>("evals");
+        opts.set("open",
+            search_common::create_random_access_open_list_factory(evals[0], false));
+        ////////
         opts.set("reopen_closed", false);
         opts.set("mpd", false);
         ScalarEvaluator *evaluator = nullptr;

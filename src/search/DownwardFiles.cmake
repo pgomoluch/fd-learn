@@ -95,6 +95,7 @@ fast_downward_plugin(
         open_lists/standard_scalar_open_list.cc
         open_lists/tiebreaking_open_list.cc
         open_lists/type_based_open_list.cc
+        open_lists/random_access_open_list.cc
     DEPENDS ORDERED_SET
     CORE_PLUGIN
 )

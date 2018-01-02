@@ -8,6 +8,7 @@
 
 #include "../open_lists/alternation_open_list.h"
 #include "../open_lists/open_list_factory.h"
+#include "../open_lists/random_access_open_list.h"
 #include "../open_lists/standard_scalar_open_list.h"
 #include "../open_lists/tiebreaking_open_list.h"
 
@@ -26,6 +27,14 @@ shared_ptr<OpenListFactory> create_standard_scalar_open_list_factory(
     options.set("eval", eval);
     options.set("pref_only", pref_only);
     return make_shared<StandardScalarOpenListFactory>(options);
+}
+
+shared_ptr<OpenListFactory> create_random_access_open_list_factory(
+    ScalarEvaluator *eval, bool pref_only) {
+    Options options;
+    options.set("eval", eval);
+    options.set("pref_only", pref_only);
+    return make_shared<RandomAccessOpenListFactory>(options);
 }
 
 static shared_ptr<OpenListFactory> create_alternation_open_list_factory(

@@ -35,6 +35,9 @@ namespace search_common {
 extern std::shared_ptr<OpenListFactory> create_standard_scalar_open_list_factory(
     ScalarEvaluator *eval, bool pref_only);
 
+extern std::shared_ptr<OpenListFactory> create_random_access_open_list_factory(
+    ScalarEvaluator *eval, bool pref_only);
+
 /*
   Create open list factory for the eager_greedy or lazy_greedy plugins.
 
