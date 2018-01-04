@@ -4,7 +4,7 @@
 /*
   Open list allowing for random access to stored elements, developed for
   use with the learning search engine (LearningSearch class). Starts as
-  a copy of StandardScalarOpenList, but is expected to diverge quickly.
+  a copy of EpsilonGreedyOpenList, but is expected to diverge quickly.
 */
 
 #include "open_list_factory.h"

@@ -34,6 +34,7 @@ shared_ptr<OpenListFactory> create_random_access_open_list_factory(
     Options options;
     options.set("eval", eval);
     options.set("pref_only", pref_only);
+    options.set("epsilon", 0.0);
     return make_shared<RandomAccessOpenListFactory>(options);
 }
 

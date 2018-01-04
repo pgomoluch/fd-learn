@@ -15,6 +15,7 @@ class LearningSearch : public SearchEngine {
     std::unique_ptr<StateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
+    unsigned step_counter = 0;
 
     std::pair<SearchNode, bool> fetch_next_node();
     //void start_f_value_statistics(EvaluationContext &eval_context);

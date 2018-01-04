@@ -122,6 +122,7 @@ SearchStatus LearningSearch::step() {
 
     }
 
+    ++step_counter;
     return IN_PROGRESS;
 }
 
