@@ -45,6 +45,8 @@ public:
     virtual ~RandomAccessOpenList() override = default;
 
     virtual Entry remove_min(vector<int> *key = nullptr) override;
+    virtual Entry remove_random(vector<int> *key = nullptr);
+    virtual Entry remove_epsilon(vector<int> *key = nullptr);
     virtual bool is_dead_end(
         EvaluationContext &eval_context) const override;
     virtual bool is_reliable_dead_end(
@@ -88,11 +90,6 @@ RandomAccessOpenList<Entry>::RandomAccessOpenList(const Options &opts)
 template<class Entry>
 Entry RandomAccessOpenList<Entry>::remove_min(vector<int> *key) {
     assert(size > 0);
-    if ((*g_rng())() < epsilon) {
-        int pos = (*g_rng())(size);
-        heap[pos].h = numeric_limits<int>::min();
-        adjust_heap_up(heap, pos);
-    }
     pop_heap(heap.begin(), heap.end(), greater<HeapNode>());
     HeapNode heap_node = heap.back();
     heap.pop_back();
@@ -102,6 +99,24 @@ Entry RandomAccessOpenList<Entry>::remove_min(vector<int> *key) {
     }
     --size;
     return heap_node.entry;
+}
+
+template<class Entry>
+Entry RandomAccessOpenList<Entry>::remove_random(vector<int> *key) {
+    assert(size > 0);
+    
+    int pos = (*g_rng())(size);
+    heap[pos].h = numeric_limits<int>::min();
+    adjust_heap_up(heap, pos);
+
+    return remove_min(key);
+}
+
+template<class Entry>
+Entry RandomAccessOpenList<Entry>::remove_epsilon(vector<int> *key) {
+    if ((*g_rng())() < epsilon)
+        return remove_random(key);
+    return remove_min(key);
 }
 
 template<class Entry>
