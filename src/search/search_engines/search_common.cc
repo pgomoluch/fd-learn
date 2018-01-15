@@ -29,15 +29,6 @@ shared_ptr<OpenListFactory> create_standard_scalar_open_list_factory(
     return make_shared<StandardScalarOpenListFactory>(options);
 }
 
-shared_ptr<OpenListFactory> create_random_access_open_list_factory(
-    ScalarEvaluator *eval, bool pref_only) {
-    Options options;
-    options.set("eval", eval);
-    options.set("pref_only", pref_only);
-    options.set("epsilon", 0.0);
-    return make_shared<RandomAccessOpenListFactory>(options);
-}
-
 static shared_ptr<OpenListFactory> create_alternation_open_list_factory(
     const vector<shared_ptr<OpenListFactory>> &subfactories, int boost) {
     Options options;

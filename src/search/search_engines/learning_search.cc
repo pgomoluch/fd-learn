@@ -8,6 +8,8 @@
 #include "../successor_generator.h"
 
 #include "../open_lists/open_list_factory.h"
+#include "../utils/memory.h"
+
 
 using namespace std;
 
@@ -16,9 +18,19 @@ namespace learning_search {
 LearningSearch::LearningSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
-      open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
-        create_state_open_list()),
+      //open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
+      //  create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)) {
+    
+    Options state_list_opts;
+    const vector<ScalarEvaluator*> &evals =
+            opts.get_list<ScalarEvaluator *>("evals");
+    // At the moment we only support a single evaluator
+    state_list_opts.set("eval", evals[0]);
+    state_list_opts.set("pref_only", false);
+    state_list_opts.set("epsilon", 0.2);
+    open_list =
+        utils::make_unique_ptr<RandomAccessStateOpenList>(state_list_opts);
 }
 
 void LearningSearch::initialize() {
@@ -57,6 +69,10 @@ void LearningSearch::print_statistics() const {
 }
 
 SearchStatus LearningSearch::step() {
+    
+    if (step_counter % STEP_SIZE == 0)
+        randomized = !randomized;
+    
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
         return FAILED;
@@ -136,7 +152,13 @@ pair<SearchNode, bool> LearningSearch::fetch_next_node() {
             SearchNode dummy_node = search_space.get_node(initial_state);
             return make_pair(dummy_node, false);
         }
-        StateID id = open_list->remove_min(nullptr);
+        
+        StateID id = StateID::no_state;
+        if (randomized) {
+            id = open_list->remove_epsilon(nullptr);
+        } else {
+            id = open_list->remove_min(nullptr);
+        }
         GlobalState state = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(state);
 
@@ -200,13 +222,6 @@ static SearchEngine *_parse(OptionParser &parser) {
 
     LearningSearch *engine = nullptr;
     if (!parser.dry_run()) {
-        //opts.set("open", search_common::create_greedy_open_list_factory(opts));
-        // For now we only support single evaluator
-        const vector<ScalarEvaluator*> &evals =
-            opts.get_list<ScalarEvaluator *>("evals");
-        opts.set("open",
-            search_common::create_random_access_open_list_factory(evals[0], false));
-        ////////
         opts.set("reopen_closed", false);
         opts.set("mpd", false);
         ScalarEvaluator *evaluator = nullptr;

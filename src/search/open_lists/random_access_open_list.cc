@@ -14,48 +14,6 @@
 
 using namespace std;
 
-template<class Entry>
-class RandomAccessOpenList : public OpenList<Entry> {
-    struct HeapNode {
-        int id;
-        int h;
-        Entry entry;
-        HeapNode(int id, int h, const Entry &entry)
-            : id(id), h(h), entry(entry) {
-        }
-
-        bool operator>(const HeapNode &other) const {
-            return make_pair(h, id) > make_pair(other.h, other.id);
-        }
-    };
-
-    vector<HeapNode> heap;
-    ScalarEvaluator *evaluator;
-
-    double epsilon;
-    int size;
-    int next_id;
-
-protected:
-    virtual void do_insertion(EvaluationContext &eval_context,
-                              const Entry &entry) override;
-
-public:
-    explicit RandomAccessOpenList(const Options &opts);
-    virtual ~RandomAccessOpenList() override = default;
-
-    virtual Entry remove_min(vector<int> *key = nullptr) override;
-    virtual Entry remove_random(vector<int> *key = nullptr);
-    virtual Entry remove_epsilon(vector<int> *key = nullptr);
-    virtual bool is_dead_end(
-        EvaluationContext &eval_context) const override;
-    virtual bool is_reliable_dead_end(
-        EvaluationContext &eval_context) const override;
-    virtual void get_involved_heuristics(set<Heuristic *> &hset) override;
-    virtual bool empty() const override;
-    virtual void clear() override;
-};
-
 template<class HeapNode>
 static void adjust_heap_up(vector<HeapNode> &heap, size_t pos) {
     assert(utils::in_bounds(pos, heap));
