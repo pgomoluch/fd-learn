@@ -14,6 +14,8 @@
 
 using namespace std;
 
+//class RandomAccessOpenList<StateOpenListEntry>;
+
 template<class HeapNode>
 static void adjust_heap_up(vector<HeapNode> &heap, size_t pos) {
     assert(utils::in_bounds(pos, heap));
@@ -30,8 +32,15 @@ static void adjust_heap_up(vector<HeapNode> &heap, size_t pos) {
 template<class Entry>
 void RandomAccessOpenList<Entry>::do_insertion(
     EvaluationContext &eval_context, const Entry &entry) {
+    int h = eval_context.get_heuristic_value(evaluator);
+    if (best_h == -1) {
+        best_h = h;
+        previous_best_h = h;
+    }
+    else if (best_h > h)
+        best_h = h;
     heap.emplace_back(
-        next_id++, eval_context.get_heuristic_value(evaluator), entry);
+        next_id++, h, entry);
     push_heap(heap.begin(), heap.end(), greater<HeapNode>());
     ++size;
 }
@@ -106,6 +115,16 @@ void RandomAccessOpenList<Entry>::clear() {
     next_id = 0;
 }
 
+template<class Entry>
+void RandomAccessOpenList<Entry>::reset_reward() {
+    previous_best_h = best_h;
+}
+
+template<class Entry>
+int RandomAccessOpenList<Entry>::get_reward() {
+    return previous_best_h - best_h;
+}
+
 RandomAccessOpenListFactory::RandomAccessOpenListFactory(
     const Options &options)
     : options(options) {
@@ -145,3 +164,5 @@ static shared_ptr<OpenListFactory> _parse(OptionParser &parser) {
 }
 
 static PluginShared<OpenListFactory> _plugin("random_access_open_list", _parse);
+
+template class RandomAccessOpenList<StateOpenListEntry>;

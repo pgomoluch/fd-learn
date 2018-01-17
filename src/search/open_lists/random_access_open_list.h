@@ -48,6 +48,8 @@ class RandomAccessOpenList : public OpenList<Entry> {
     double epsilon;
     int size;
     int next_id;
+    int best_h = -1;
+    int previous_best_h = -1;
 
 protected:
     virtual void do_insertion(EvaluationContext &eval_context,
@@ -57,9 +59,8 @@ public:
     explicit RandomAccessOpenList(const Options &opts);
     virtual ~RandomAccessOpenList() override = default;
 
+    // Open list interface
     virtual Entry remove_min(std::vector<int> *key = nullptr) override;
-    virtual Entry remove_random(std::vector<int> *key = nullptr);
-    virtual Entry remove_epsilon(std::vector<int> *key = nullptr);
     virtual bool is_dead_end(
         EvaluationContext &eval_context) const override;
     virtual bool is_reliable_dead_end(
@@ -67,6 +68,12 @@ public:
     virtual void get_involved_heuristics(std::set<Heuristic *> &hset) override;
     virtual bool empty() const override;
     virtual void clear() override;
+
+    // Remaining methods
+    Entry remove_random(std::vector<int> *key = nullptr);
+    Entry remove_epsilon(std::vector<int> *key = nullptr);
+    void reset_reward();
+    int get_reward();
 };
 
 #endif

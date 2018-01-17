@@ -10,6 +10,7 @@
 #include "../open_lists/open_list_factory.h"
 #include "../utils/memory.h"
 
+#include <random>
 
 using namespace std;
 
@@ -20,7 +21,8 @@ LearningSearch::LearningSearch(const Options &opts)
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       //open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
       //  create_state_open_list()),
-      f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)) {
+      f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
+      rng(0) {
     
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
@@ -70,8 +72,20 @@ void LearningSearch::print_statistics() const {
 
 SearchStatus LearningSearch::step() {
     
-    if (step_counter % STEP_SIZE == 0)
-        randomized = !randomized;
+    if (step_counter % STEP_SIZE == 0) {
+        int reward = open_list->get_reward();
+        open_list->reset_reward();
+        weights[current_action_id] += reward;
+        discrete_distribution<> d(weights.begin(), weights.end());
+        current_action_id = d(rng);
+        
+        // Dev logging
+        cout << "Reward: " << reward << endl;
+        cout << "Weights: ";
+        for(int i: weights)
+            cout << i << " ";
+        cout << ", Choice: " << current_action_id << ", ";
+    }
     
     pair<SearchNode, bool> n = fetch_next_node();
     if (!n.second) {
@@ -152,13 +166,8 @@ pair<SearchNode, bool> LearningSearch::fetch_next_node() {
             SearchNode dummy_node = search_space.get_node(initial_state);
             return make_pair(dummy_node, false);
         }
-        
-        StateID id = StateID::no_state;
-        if (randomized) {
-            id = open_list->remove_epsilon(nullptr);
-        } else {
-            id = open_list->remove_min(nullptr);
-        }
+
+        StateID id = (this->*actions[current_action_id])();
         GlobalState state = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(state);
 
@@ -171,6 +180,14 @@ pair<SearchNode, bool> LearningSearch::fetch_next_node() {
         statistics.inc_expanded(); // why here?
         return make_pair(node, true);
     }
+}
+
+StateID LearningSearch::get_best_state() {
+    return open_list->remove_min();
+}
+
+StateID LearningSearch::get_randomized_state() {
+    return open_list->remove_epsilon();
 }
 
 // void LearningSearch::start_f_value_statistics(EvaluationContext &eval_context) {
