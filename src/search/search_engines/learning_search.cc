@@ -75,7 +75,7 @@ SearchStatus LearningSearch::step() {
     if (step_counter % STEP_SIZE == 0) {
         int reward = open_list->get_reward();
         open_list->reset_reward();
-        weights[current_action_id] += reward;
+        weights[current_action_id] += (reward > 0);
         discrete_distribution<> d(weights.begin(), weights.end());
         current_action_id = d(rng);
         

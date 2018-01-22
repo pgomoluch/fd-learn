@@ -117,7 +117,7 @@ void RandomAccessOpenList<Entry>::clear() {
 
 template<class Entry>
 void RandomAccessOpenList<Entry>::reset_reward() {
-    previous_best_h = best_h;
+    previous_best_h = best_h = heap.begin()->h;
 }
 
 template<class Entry>
