@@ -73,9 +73,28 @@ void LearningSearch::print_statistics() const {
 SearchStatus LearningSearch::step() {
     
     if (step_counter % STEP_SIZE == 0) {
-        int reward = open_list->get_reward();
-        open_list->reset_reward();
-        weights[current_action_id] += (reward > 0);
+        int reward = 0;
+        if (step_counter > 0) {
+            reward = open_list->get_reward();
+            open_list->reset_reward();
+
+            if (reward > 0) {
+                int update = UNIT_REWARD;
+                // reward the recent action
+                weights[current_action_id] += update;
+                // reward up to REWARD_WINDOW previous actions
+                for (auto it = past_actions.begin(); it != past_actions.end(); ++it) {
+                    update /= 2;
+                    weights[*it] += update;
+                }
+            }
+        }
+        // remember up to REWARD_WINDOW previous actions
+        past_actions.push_front(current_action_id);
+        if (past_actions.size() > REWARD_WINDOW)
+            past_actions.pop_back();
+        
+        // choose the next action
         discrete_distribution<> d(weights.begin(), weights.end());
         current_action_id = d(rng);
         

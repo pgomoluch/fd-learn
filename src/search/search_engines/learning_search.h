@@ -7,6 +7,7 @@
 #include "../open_lists/random_access_open_list.h"
 
 #include <random>
+#include <deque>
 
 namespace options {
 class Options;
@@ -19,7 +20,9 @@ using RandomAccessStateOpenList = RandomAccessOpenList<StateOpenListEntry>;
 class LearningSearch : public SearchEngine {
     const bool reopen_closed_nodes;
     const unsigned STEP_SIZE = 100;
-    const int INITIAL_WEIGHT = 10;
+    const int INITIAL_WEIGHT = 40;
+    const unsigned REWARD_WINDOW = 2;
+    const int UNIT_REWARD = 4;
     std::unique_ptr<RandomAccessStateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
@@ -40,6 +43,7 @@ class LearningSearch : public SearchEngine {
         &LearningSearch::get_best_state,
         &LearningSearch::get_randomized_state};
     std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT};
+    std::deque<int> past_actions;
     int current_action_id = 0;
 
 protected:
