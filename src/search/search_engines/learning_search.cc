@@ -71,42 +71,22 @@ void LearningSearch::print_statistics() const {
 }
 
 SearchStatus LearningSearch::step() {
-    
-    if (step_counter % STEP_SIZE == 0) {
-        int reward = 0;
-        if (step_counter > 0) {
-            reward = open_list->get_reward();
-            open_list->reset_reward();
+    if (step_counter % STEP_SIZE == 0)
+        update_routine();
+    return (this->*actions[current_action_id])();
+}
 
-            if (reward > 0) {
-                int update = UNIT_REWARD;
-                // reward the recent action
-                weights[current_action_id] += update;
-                // reward up to REWARD_WINDOW previous actions
-                for (auto it = past_actions.begin(); it != past_actions.end(); ++it) {
-                    update /= 2;
-                    weights[*it] += update;
-                }
-            }
-        }
-        // remember up to REWARD_WINDOW previous actions
-        past_actions.push_front(current_action_id);
-        if (past_actions.size() > REWARD_WINDOW)
-            past_actions.pop_back();
-        
-        // choose the next action
-        discrete_distribution<> d(weights.begin(), weights.end());
-        current_action_id = d(rng);
-        
-        // Dev logging
-        cout << "Reward: " << reward << endl;
-        cout << "Weights: ";
-        for(int i: weights)
-            cout << i << " ";
-        cout << ", Choice: " << current_action_id << ", ";
-    }
-    
-    pair<SearchNode, bool> n = fetch_next_node();
+SearchStatus LearningSearch::greedy_step() {
+    return simple_step(false);
+}
+
+SearchStatus LearningSearch::epsilon_greedy_step() {
+    return simple_step(true);
+}
+
+SearchStatus LearningSearch::simple_step(bool randomized) {
+
+    pair<SearchNode, bool> n = fetch_next_node(randomized);
     if (!n.second) {
         return FAILED;
     }
@@ -122,60 +102,14 @@ SearchStatus LearningSearch::step() {
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-
-        SearchNode succ_node = search_space.get_node(succ_state);
-
-        if (succ_node.is_dead_end())
-            continue;
-
-        if (succ_node.is_new()) {
-            for (Heuristic *h: heuristics) {
-                h->notify_state_transition(state, *op, succ_state);
-            }
-        }
-
-        if (succ_node.is_new()) {
-            // As in eager_search.cc, succ_node.get_g() isn't available yet
-            int succ_g = node.get_g() + get_adjusted_cost(*op);
-
-            // no preferred operators for now
-            EvaluationContext eval_context(succ_state, succ_g, false, &statistics);
-            statistics.inc_evaluated_states();
-
-            if (open_list->is_dead_end(eval_context)) {
-                succ_node.mark_as_dead_end();
-                statistics.inc_dead_ends();
-                continue;
-            }
-            succ_node.open(node, op);
-
-            open_list->insert(eval_context, succ_state.get_id());
-        } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
-            // A new cheapest path to an open or closed states
-            if (reopen_closed_nodes) {
-                if (succ_node.is_closed()) {
-                    statistics.inc_reopened();
-                }
-                succ_node.reopen(node, op);
-
-                EvaluationContext eval_context(succ_state, succ_node.get_g(),
-                    false, &statistics);
-                    open_list->insert(eval_context, succ_state.get_id());
-            } else {
-                // As in eager_search.cc, if nodes aren't reopened we only change
-                // the parent node.
-                succ_node.update_parent(node, op);
-            }
-        }
-
-
+        process_state(node, state, op, succ_state);
     }
 
     ++step_counter;
     return IN_PROGRESS;
 }
 
-pair<SearchNode, bool> LearningSearch::fetch_next_node() {
+pair<SearchNode, bool> LearningSearch::fetch_next_node(bool randomized) {
     while (true) {
         if (open_list->empty()) {
             cout << "Completely explored state space -- no solution!" << endl;
@@ -186,7 +120,13 @@ pair<SearchNode, bool> LearningSearch::fetch_next_node() {
             return make_pair(dummy_node, false);
         }
 
-        StateID id = (this->*actions[current_action_id])();
+        StateID id = StateID::no_state;
+        if (randomized)
+            id = get_randomized_state();
+        else
+            id = get_best_state();
+        
+        //StateID _id = (this->*actions[current_action_id])();
         GlobalState state = state_registry.lookup_state(id);
         SearchNode node = search_space.get_node(state);
 
@@ -207,6 +147,89 @@ StateID LearningSearch::get_best_state() {
 
 StateID LearningSearch::get_randomized_state() {
     return open_list->remove_epsilon();
+}
+
+void LearningSearch::update_routine() {
+    int reward = 0;
+    if (step_counter > 0) {
+        reward = open_list->get_reward();
+        open_list->reset_reward();
+
+        if (reward > 0) {
+            int update = UNIT_REWARD;
+            // reward the recent action
+            weights[current_action_id] += update;
+            // reward up to REWARD_WINDOW previous actions
+            for (auto it = past_actions.begin(); it != past_actions.end(); ++it) {
+                update /= 2;
+                weights[*it] += update;
+            }
+        }
+    }
+    // remember up to REWARD_WINDOW previous actions
+    past_actions.push_front(current_action_id);
+    if (past_actions.size() > REWARD_WINDOW)
+        past_actions.pop_back();
+    
+    // choose the next action
+    discrete_distribution<> d(weights.begin(), weights.end());
+    current_action_id = d(rng);
+    
+    // Dev logging
+    cout << "Reward: " << reward << endl;
+    cout << "Weights: ";
+    for(int i: weights)
+        cout << i << " ";
+    cout << ", Choice: " << current_action_id << ", ";
+}
+
+void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
+    const GlobalOperator *op, const GlobalState &succ_state) {
+    
+    SearchNode succ_node = search_space.get_node(succ_state);
+
+    if (succ_node.is_dead_end())
+        return;
+
+    if (succ_node.is_new()) {
+        for (Heuristic *h: heuristics) {
+            h->notify_state_transition(state, *op, succ_state);
+        }
+    }
+
+    if (succ_node.is_new()) {
+        // As in eager_search.cc, succ_node.get_g() isn't available yet
+        int succ_g = node.get_g() + get_adjusted_cost(*op);
+
+        // no preferred operators for now
+        EvaluationContext eval_context(succ_state, succ_g, false, &statistics);
+        statistics.inc_evaluated_states();
+
+        if (open_list->is_dead_end(eval_context)) {
+            succ_node.mark_as_dead_end();
+            statistics.inc_dead_ends();
+            return;
+        }
+        succ_node.open(node, op);
+
+        open_list->insert(eval_context, succ_state.get_id());
+    } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
+        // A new cheapest path to an open or closed states
+        if (reopen_closed_nodes) {
+            if (succ_node.is_closed()) {
+                statistics.inc_reopened();
+            }
+            succ_node.reopen(node, op);
+
+            EvaluationContext eval_context(succ_state, succ_node.get_g(),
+                false, &statistics);
+                open_list->insert(eval_context, succ_state.get_id());
+        } else {
+            // As in eager_search.cc, if nodes aren't reopened we only change
+            // the parent node.
+            succ_node.update_parent(node, op);
+        }
+    }
 }
 
 // void LearningSearch::start_f_value_statistics(EvaluationContext &eval_context) {

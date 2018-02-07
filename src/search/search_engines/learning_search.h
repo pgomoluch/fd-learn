@@ -29,19 +29,26 @@ class LearningSearch : public SearchEngine {
     unsigned step_counter = 0;
     std::mt19937 rng;
 
-    std::pair<SearchNode, bool> fetch_next_node();
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
-
-    // High-level actions
-    typedef StateID (LearningSearch::*Action)();
-
+    void update_routine();
+    
+    SearchStatus simple_step(bool randomized);
+    std::pair<SearchNode, bool> fetch_next_node(bool randomized);
     StateID get_best_state();
     StateID get_randomized_state();
+    void process_state(const SearchNode &node, const GlobalState &state,
+        const GlobalOperator *op, const GlobalState &succ_state);
+
+    // High-level actions
+    typedef SearchStatus (LearningSearch::*Action)();
+
+    SearchStatus greedy_step();
+    SearchStatus epsilon_greedy_step();
 
     std::vector<Action> actions = {
-        &LearningSearch::get_best_state,
-        &LearningSearch::get_randomized_state};
+        &LearningSearch::greedy_step,
+        &LearningSearch::epsilon_greedy_step};
     std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT};
     std::deque<int> past_actions;
     int current_action_id = 0;
