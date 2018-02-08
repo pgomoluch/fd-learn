@@ -109,6 +109,51 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
     return IN_PROGRESS;
 }
 
+SearchStatus LearningSearch::rollout_step() {
+
+    pair<SearchNode, bool> n = fetch_next_node(false);
+    if (!n.second) {
+        return FAILED;
+    }
+    SearchNode node = n.first;
+
+    GlobalState state = node.get_state();
+    if (check_goal_and_set_plan(state))
+        return SOLVED;
+    
+    vector<const GlobalOperator*> applicable_ops;
+    g_successor_generator->generate_applicable_ops(state, applicable_ops);
+    
+    // Fully expand the processed state
+    for (const GlobalOperator *op: applicable_ops) {
+        GlobalState succ_state = state_registry.get_successor_state(state, *op);
+        statistics.inc_generated();
+        process_state(node, state, op, succ_state);
+    }
+
+    if (applicable_ops.size() == 0)
+        return IN_PROGRESS;
+    
+    // Perform a stochastic rollout from expanded state
+    const GlobalOperator *op = applicable_ops[rng() % applicable_ops.size()];
+    GlobalState rollout_state = state_registry.get_successor_state(state, *op);
+    for (unsigned i = 0; i < ROLLOUT_LENGTH; ++i) {
+        vector<const GlobalOperator*> applicable_ops;
+        g_successor_generator->generate_applicable_ops(rollout_state, applicable_ops);
+        if (applicable_ops.size() == 0)
+            break;
+        const GlobalOperator *op = applicable_ops[rng() % applicable_ops.size()];
+        GlobalState succ_state = state_registry.get_successor_state(rollout_state, *op);
+        statistics.inc_generated();
+        SearchNode node = search_space.get_node(rollout_state);
+        process_state(node, rollout_state, op, succ_state);
+        rollout_state = succ_state;
+    }
+
+    ++step_counter;
+    return IN_PROGRESS;
+}
+
 pair<SearchNode, bool> LearningSearch::fetch_next_node(bool randomized) {
     while (true) {
         if (open_list->empty()) {

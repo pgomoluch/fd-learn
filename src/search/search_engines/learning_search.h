@@ -23,6 +23,7 @@ class LearningSearch : public SearchEngine {
     const int INITIAL_WEIGHT = 40;
     const unsigned REWARD_WINDOW = 2;
     const int UNIT_REWARD = 4;
+    const unsigned ROLLOUT_LENGTH = 20;
     std::unique_ptr<RandomAccessStateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
@@ -45,11 +46,13 @@ class LearningSearch : public SearchEngine {
 
     SearchStatus greedy_step();
     SearchStatus epsilon_greedy_step();
+    SearchStatus rollout_step();
 
     std::vector<Action> actions = {
         &LearningSearch::greedy_step,
-        &LearningSearch::epsilon_greedy_step};
-    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT};
+        &LearningSearch::epsilon_greedy_step,
+        &LearningSearch::rollout_step};
+    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
     std::deque<int> past_actions;
     int current_action_id = 0;
 
