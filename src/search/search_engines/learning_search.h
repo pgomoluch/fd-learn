@@ -47,12 +47,14 @@ class LearningSearch : public SearchEngine {
     SearchStatus greedy_step();
     SearchStatus epsilon_greedy_step();
     SearchStatus rollout_step();
+    SearchStatus preferred_rollout_step();
 
     std::vector<Action> actions = {
         &LearningSearch::greedy_step,
         &LearningSearch::epsilon_greedy_step,
-        &LearningSearch::rollout_step};
-    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
+        &LearningSearch::rollout_step,
+        &LearningSearch::preferred_rollout_step};
+    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
     std::deque<int> past_actions;
     int current_action_id = 0;
 

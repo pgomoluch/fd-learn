@@ -154,6 +154,60 @@ SearchStatus LearningSearch::rollout_step() {
     return IN_PROGRESS;
 }
 
+SearchStatus LearningSearch::preferred_rollout_step() {
+
+    pair<SearchNode, bool> n = fetch_next_node(false);
+    if (!n.second) {
+        return FAILED;
+    }
+    SearchNode node = n.first;
+
+    GlobalState state = node.get_state();
+    if (check_goal_and_set_plan(state))
+        return SOLVED;
+    
+    vector<const GlobalOperator*> applicable_ops;
+    g_successor_generator->generate_applicable_ops(state, applicable_ops);
+    
+    // Fully expand the processed state
+    for (const GlobalOperator *op: applicable_ops) {
+        GlobalState succ_state = state_registry.get_successor_state(state, *op);
+        statistics.inc_generated();
+        process_state(node, state, op, succ_state);
+    }
+
+    if (applicable_ops.size() == 0)
+        return IN_PROGRESS;
+    
+    // Like in EagerSearch, this evaluates the expanded state (again) to get preferred ops
+    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
+        collect_preferred_operators(eval_context, heuristics);
+
+    // Perform a preferred operators rollout from the expanded state
+    GlobalState rollout_state = state;
+    for (unsigned i = 0; i < ROLLOUT_LENGTH; ++i) {
+
+        // Find an applicable preferred operator
+        std::vector<const GlobalOperator *>::const_iterator it;
+        for (it = preferred_operators.begin(); it != preferred_operators.end(); it++) {
+            if ((*it)->is_applicable(rollout_state)) {
+                break;
+            }
+        }
+        if (it == preferred_operators.end()) // no applicable operators
+            break;
+        
+        GlobalState succ_state = state_registry.get_successor_state(rollout_state, **it);
+        statistics.inc_generated();
+        SearchNode node = search_space.get_node(rollout_state);
+        process_state(node, rollout_state, *it, succ_state);
+        rollout_state = succ_state;
+    }
+    ++step_counter;
+    return IN_PROGRESS;
+}
+
 pair<SearchNode, bool> LearningSearch::fetch_next_node(bool randomized) {
     while (true) {
         if (open_list->empty()) {
