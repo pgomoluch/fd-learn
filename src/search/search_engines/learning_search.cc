@@ -22,7 +22,8 @@ LearningSearch::LearningSearch(const Options &opts)
       //open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
       //  create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
-      rng(0) {
+      rng(0),
+      /*learning_log("rl-log.txt")*/ {
     
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
@@ -183,6 +184,7 @@ SearchStatus LearningSearch::preferred_rollout_step() {
     EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
     algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
         collect_preferred_operators(eval_context, heuristics);
+    preferred_operators.shuffle(*g_rng());
 
     // Perform a preferred operators rollout from the expanded state
     GlobalState rollout_state = state;
@@ -197,11 +199,15 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         }
         if (it == preferred_operators.end()) // no applicable operators
             break;
-        
         GlobalState succ_state = state_registry.get_successor_state(rollout_state, **it);
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         process_state(node, rollout_state, *it, succ_state);
+        
+        EvaluationContext eval_context(succ_state, node.get_g()+(*it)->get_cost(), false, &statistics, true);
+        preferred_operators = collect_preferred_operators(eval_context, heuristics);
+        preferred_operators.shuffle(*g_rng());
+
         rollout_state = succ_state;
     }
     ++step_counter;

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Usage: covtest.sh <problem directory> <search config> <timeout>
-# E.g.: covtest.sh ../../IPC/transport "eager_greedy(cea)" 60
+# Ex1: covtest.sh ../IPC/transport "--search eager_greedy(cea)" 60
+# Ex2: covtest.sh ../IPC/transport "--heuristic h=ff() --search eager_greedy([h],preferred=[h])"
 
 base_counter=0
 counter=0
@@ -12,9 +13,7 @@ for p in $1/p*.pddl
 do
     base_counter=$((base_counter+1))
     echo "Trying ${p}..."
-    fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p --search $2"
-    # With preferred operators:
-    #fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p --heuristic h=external() --search eager_greedy([h],preferred=[h])"
+    fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p $2"
     echo $fd_command
     timeout $3 $fd_command > covtest-tmp-result
     if [ $? -eq 0 ]

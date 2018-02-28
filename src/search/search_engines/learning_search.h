@@ -9,6 +9,8 @@
 #include <random>
 #include <deque>
 
+#include <fstream>
+
 namespace options {
 class Options;
 }
@@ -29,6 +31,7 @@ class LearningSearch : public SearchEngine {
     std::vector<Heuristic*> heuristics;
     unsigned step_counter = 0;
     std::mt19937 rng;
+    //std::ofstream learning_log;
 
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
