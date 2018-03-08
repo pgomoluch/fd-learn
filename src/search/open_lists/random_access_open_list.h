@@ -42,6 +42,8 @@ class RandomAccessOpenList : public OpenList<Entry> {
         }
     };
 
+    const bool only_preferred = false;
+
     std::vector<HeapNode> heap;
     ScalarEvaluator *evaluator;
 
@@ -50,6 +52,7 @@ class RandomAccessOpenList : public OpenList<Entry> {
     int next_id;
     int best_h = -1;
     int previous_best_h = -1;
+    int all_time_best_h = -1;
 
 protected:
     virtual void do_insertion(EvaluationContext &eval_context,
@@ -70,10 +73,18 @@ public:
     virtual void clear() override;
 
     // Remaining methods
+
+    // Like OpenList.insert, but returns whether the state has the lowest
+    // heuristic evaluation recorded
+    bool insert_and_check(EvaluationContext &eval_context, const Entry &entry);
+
     Entry remove_random(std::vector<int> *key = nullptr);
     Entry remove_epsilon(std::vector<int> *key = nullptr);
     void reset_reward();
     int get_reward();
+
+private:
+    bool do_insertion_and_check(EvaluationContext &eval_context, const Entry &entry);
 };
 
 #endif

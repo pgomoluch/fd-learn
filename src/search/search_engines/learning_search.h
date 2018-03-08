@@ -26,12 +26,14 @@ class LearningSearch : public SearchEngine {
     const unsigned REWARD_WINDOW = 2;
     const int UNIT_REWARD = 4;
     const unsigned ROLLOUT_LENGTH = 20;
+    const unsigned STALL_SIZE = 1000;
     std::unique_ptr<RandomAccessStateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     unsigned step_counter = 0;
+    unsigned expansions_without_progress = 0;
     std::mt19937 rng;
-    //std::ofstream learning_log;
+    std::ofstream learning_log;
 
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
@@ -41,7 +43,7 @@ class LearningSearch : public SearchEngine {
     std::pair<SearchNode, bool> fetch_next_node(bool randomized);
     StateID get_best_state();
     StateID get_randomized_state();
-    void process_state(const SearchNode &node, const GlobalState &state,
+    bool process_state(const SearchNode &node, const GlobalState &state,
         const GlobalOperator *op, const GlobalState &succ_state);
 
     // High-level actions

@@ -32,17 +32,43 @@ static void adjust_heap_up(vector<HeapNode> &heap, size_t pos) {
 template<class Entry>
 void RandomAccessOpenList<Entry>::do_insertion(
     EvaluationContext &eval_context, const Entry &entry) {
+    do_insertion_and_check(eval_context, entry);
+}
+
+template<class Entry>
+bool RandomAccessOpenList<Entry>::do_insertion_and_check(
+    EvaluationContext &eval_context, const Entry &entry) {
+    bool result = false;
     int h = eval_context.get_heuristic_value(evaluator);
     if (best_h == -1) {
         best_h = h;
         previous_best_h = h;
+        all_time_best_h = h;
+        result = true;
     }
-    else if (best_h > h)
+    else if (best_h > h) {
         best_h = h;
+        if (all_time_best_h > h) {
+            all_time_best_h = h;
+            result = true;
+        }
+    }
     heap.emplace_back(
         next_id++, h, entry);
     push_heap(heap.begin(), heap.end(), greater<HeapNode>());
     ++size;
+
+    return result;
+}
+
+template<class Entry>
+bool RandomAccessOpenList<Entry>::insert_and_check(
+    EvaluationContext &eval_context, const Entry &entry) {
+    if (only_preferred && !eval_context.is_preferred())
+        return false;
+    if (!is_dead_end(eval_context))
+        return do_insertion_and_check(eval_context, entry);
+    return false;
 }
 
 template<class Entry>
