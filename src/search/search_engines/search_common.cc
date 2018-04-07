@@ -8,7 +8,7 @@
 
 #include "../open_lists/alternation_open_list.h"
 #include "../open_lists/open_list_factory.h"
-#include "../open_lists/random_access_open_list.h"
+#include "../open_lists/simple_random_access_open_list.h"
 #include "../open_lists/standard_scalar_open_list.h"
 #include "../open_lists/tiebreaking_open_list.h"
 

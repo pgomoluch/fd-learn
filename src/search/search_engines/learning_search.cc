@@ -33,7 +33,7 @@ LearningSearch::LearningSearch(const Options &opts)
     state_list_opts.set("pref_only", false);
     state_list_opts.set("epsilon", 0.2);
     open_list =
-        utils::make_unique_ptr<RandomAccessStateOpenList>(state_list_opts);
+        utils::make_unique_ptr<SimpleRandomAccessStateOpenList>(state_list_opts);
 }
 
 void LearningSearch::initialize() {
@@ -62,6 +62,9 @@ void LearningSearch::initialize() {
         SearchNode node = search_space.get_node(initial_state);
         node.open_initial();
 
+        // At the moment we only support a single heuristic
+        int h = eval_context.get_heuristic_value(heuristics[0]);
+        all_time_best_h = best_h = previous_best_h = h;
         open_list->insert(eval_context, initial_state.get_id());
     }
 }
@@ -100,6 +103,7 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
 
+    ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
@@ -125,19 +129,13 @@ SearchStatus LearningSearch::rollout_step() {
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
     
-    bool progress = false;
     // Fully expand the processed state
+    ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        if (process_state(node, state, op, succ_state))
-            progress = true;
+        process_state(node, state, op, succ_state);
     }
-
-    if(progress)
-        expansions_without_progress = 0;
-    else
-        ++expansions_without_progress;
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
         ++step_counter;
@@ -157,10 +155,9 @@ SearchStatus LearningSearch::rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        if(process_state(node, rollout_state, op, succ_state)) {
-            expansions_without_progress = 0;
+        process_state(node, rollout_state, op, succ_state);
+        if(expansions_without_progress == 0)
             break;
-        }
         rollout_state = succ_state;
     }
 
@@ -184,19 +181,13 @@ SearchStatus LearningSearch::preferred_rollout_step() {
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
     
-    bool progress = false;
     // Fully expand the processed state
+    ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        if (process_state(node, state, op, succ_state))
-            progress = true;
+        process_state(node, state, op, succ_state);
     }
-
-    if(progress)
-        expansions_without_progress = 0;
-    else
-        ++expansions_without_progress;
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
         ++step_counter;
@@ -226,10 +217,9 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        if(process_state(node, rollout_state, *it, succ_state)) {
-            expansions_without_progress = 0;
+        process_state(node, rollout_state, *it, succ_state);
+        if (expansions_without_progress == 0)
             break;
-        }
         
         EvaluationContext eval_context(succ_state, node.get_g()+(*it)->get_cost(), false, &statistics, true);
         preferred_operators = collect_preferred_operators(eval_context, heuristics);
@@ -285,8 +275,8 @@ StateID LearningSearch::get_randomized_state() {
 void LearningSearch::update_routine() {
     int reward = 0;
     if (step_counter > 0) {
-        reward = open_list->get_reward();
-        open_list->reset_reward();
+        reward = previous_best_h - best_h;
+        //open_list->reset_reward();
 
         if (reward > 0) {
             int update = UNIT_REWARD;
@@ -317,13 +307,13 @@ void LearningSearch::update_routine() {
     cout << "ENP: " << expansions_without_progress << ", ";
 }
 
-bool LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
+void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
     const GlobalOperator *op, const GlobalState &succ_state) {
     
     SearchNode succ_node = search_space.get_node(succ_state);
 
     if (succ_node.is_dead_end())
-        return false;
+        return;
 
     if (succ_node.is_new()) {
         for (Heuristic *h: heuristics) {
@@ -331,7 +321,6 @@ bool LearningSearch::process_state(const SearchNode &node, const GlobalState &st
         }
     }
 
-    bool result = false;
     if (succ_node.is_new()) {
         // As in eager_search.cc, succ_node.get_g() isn't available yet
         int succ_g = node.get_g() + get_adjusted_cost(*op);
@@ -343,11 +332,20 @@ bool LearningSearch::process_state(const SearchNode &node, const GlobalState &st
         if (open_list->is_dead_end(eval_context)) {
             succ_node.mark_as_dead_end();
             statistics.inc_dead_ends();
-            return false;
+            return;
         }
         succ_node.open(node, op);
 
-        result = open_list->insert_and_check(eval_context, succ_state.get_id());
+        // At the moment we only support a single heuristic
+        int h = eval_context.get_heuristic_value(heuristics[0]);
+        if (best_h > h) {
+            best_h = h;
+            if (all_time_best_h > h) {
+                all_time_best_h = h;
+                expansions_without_progress = 0;
+            }
+        }
+        open_list->insert(eval_context, succ_state.get_id());
     } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
         // A new cheapest path to an open or closed states
         if (reopen_closed_nodes) {
@@ -365,7 +363,6 @@ bool LearningSearch::process_state(const SearchNode &node, const GlobalState &st
             succ_node.update_parent(node, op);
         }
     }
-    return result;
 }
 
 // void LearningSearch::start_f_value_statistics(EvaluationContext &eval_context) {
