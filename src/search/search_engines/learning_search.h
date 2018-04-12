@@ -17,6 +17,7 @@ class Options;
 
 namespace learning_search {
 
+using RandomAccessStateOpenList = RandomAccessOpenList<StateOpenListEntry>;
 using SimpleRandomAccessStateOpenList = SimpleRandomAccessOpenList<StateOpenListEntry>;
 
 class LearningSearch : public SearchEngine {
@@ -27,7 +28,7 @@ class LearningSearch : public SearchEngine {
     const int UNIT_REWARD = 4;
     const unsigned ROLLOUT_LENGTH = 20;
     const unsigned STALL_SIZE = 1000;
-    std::unique_ptr<SimpleRandomAccessStateOpenList> open_list;
+    std::unique_ptr<RandomAccessStateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     unsigned step_counter = 0;
@@ -74,6 +75,8 @@ public:
     explicit LearningSearch(const options::Options &opts);
 
     virtual void print_statistics() const override;
+
+    static std::shared_ptr<RAOpenListFactory> create_ra_open_list_factory(const Options &options);
 };
 
 }

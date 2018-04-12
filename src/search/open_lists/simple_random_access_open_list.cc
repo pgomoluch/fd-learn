@@ -113,17 +113,17 @@ SimpleRandomAccessOpenListFactory::SimpleRandomAccessOpenListFactory(
     : options(options) {
 }
 
-unique_ptr<StateOpenList>
+unique_ptr<RAStateOpenList>
 SimpleRandomAccessOpenListFactory::create_state_open_list() {
     return utils::make_unique_ptr<SimpleRandomAccessOpenList<StateOpenListEntry>>(options);
 }
 
-unique_ptr<EdgeOpenList>
+unique_ptr<RAEdgeOpenList>
 SimpleRandomAccessOpenListFactory::create_edge_open_list() {
     return utils::make_unique_ptr<SimpleRandomAccessOpenList<EdgeOpenListEntry>>(options);
 }
 
-static shared_ptr<OpenListFactory> _parse(OptionParser &parser) {
+static shared_ptr<RAOpenListFactory> _parse(OptionParser &parser) {
     parser.document_synopsis(
         "Random access open list",
         "Enables retiving random entries. "
@@ -146,6 +146,6 @@ static shared_ptr<OpenListFactory> _parse(OptionParser &parser) {
     }
 }
 
-static PluginShared<OpenListFactory> _plugin("simple_random_access_open_list", _parse);
+static PluginShared<RAOpenListFactory> _plugin("simple_random_access_open_list", _parse);
 
 template class SimpleRandomAccessOpenList<StateOpenListEntry>;

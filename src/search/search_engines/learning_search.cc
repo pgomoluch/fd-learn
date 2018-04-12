@@ -19,8 +19,8 @@ namespace learning_search {
 LearningSearch::LearningSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
-      //open_list(opts.get<shared_ptr<OpenListFactory>>("open")->
-      //  create_state_open_list()),
+      open_list(opts.get<shared_ptr<RAOpenListFactory>>("ra_open")->
+        create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       rng(0),
       learning_log("rl-log.txt") {
@@ -28,12 +28,6 @@ LearningSearch::LearningSearch(const Options &opts)
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
             opts.get_list<ScalarEvaluator *>("evals");
-    // At the moment we only support a single evaluator
-    state_list_opts.set("eval", evals[0]);
-    state_list_opts.set("pref_only", false);
-    state_list_opts.set("epsilon", 0.2);
-    open_list =
-        utils::make_unique_ptr<SimpleRandomAccessStateOpenList>(state_list_opts);
 }
 
 void LearningSearch::initialize() {
@@ -380,6 +374,20 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
 //     }
 // }
 
+shared_ptr<RAOpenListFactory> LearningSearch::create_ra_open_list_factory(
+    const Options &options) {
+    const vector<ScalarEvaluator *> evals =
+        options.get_list<ScalarEvaluator *>("evals");
+
+    Options state_list_opts;
+    // At the moment we only support a single heuristic
+    state_list_opts.set("eval", evals[0]);
+    state_list_opts.set("pref_only", false);
+    state_list_opts.set("epsilon", 0.2);
+    
+    return make_shared<SimpleRandomAccessOpenListFactory>(state_list_opts);
+}
+
 void add_pruning_option(OptionParser &parser) {
     parser.add_option<shared_ptr<PruningMethod>>(
         "pruning",
@@ -398,6 +406,7 @@ static SearchEngine *_parse(OptionParser &parser) {
         "Closed nodes",
         "As in eager greedy best first search.");
 
+    //parser.add_option<shared_ptr<RAOpenListFactory>>("ra_open", "random access open list");
     parser.add_list_option<ScalarEvaluator *>("evals", "scalar evaluators");
     parser.add_list_option<Heuristic *>(
         "preferred",
@@ -414,6 +423,7 @@ static SearchEngine *_parse(OptionParser &parser) {
 
     LearningSearch *engine = nullptr;
     if (!parser.dry_run()) {
+        opts.set("ra_open", LearningSearch::create_ra_open_list_factory(opts));
         opts.set("reopen_closed", false);
         opts.set("mpd", false);
         ScalarEvaluator *evaluator = nullptr;

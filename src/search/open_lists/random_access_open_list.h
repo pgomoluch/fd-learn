@@ -14,4 +14,7 @@ public:
     virtual Entry remove_epsilon(std::vector<int> *key = nullptr) = 0;
 };
 
+using RAStateOpenList = RandomAccessOpenList<StateOpenListEntry>;
+using RAEdgeOpenList = RandomAccessOpenList<EdgeOpenListEntry>;
+
 #endif

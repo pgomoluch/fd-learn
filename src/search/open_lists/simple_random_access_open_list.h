@@ -7,19 +7,19 @@
   a copy of EpsilonGreedyOpenList, but is expected to diverge quickly.
 */
 
-#include "open_list_factory.h"
+#include "ra_open_list_factory.h"
 #include "../option_parser_util.h"
 
 #include "random_access_open_list.h"
 
-class SimpleRandomAccessOpenListFactory : public OpenListFactory {
+class SimpleRandomAccessOpenListFactory : public RAOpenListFactory {
     Options options; // ?
 public:
     explicit SimpleRandomAccessOpenListFactory(const Options &options);
     virtual ~SimpleRandomAccessOpenListFactory() override = default;
 
-    virtual std::unique_ptr<StateOpenList> create_state_open_list() override;
-    virtual std::unique_ptr<EdgeOpenList> create_edge_open_list() override;
+    virtual std::unique_ptr<RAStateOpenList> create_state_open_list() override;
+    virtual std::unique_ptr<RAEdgeOpenList> create_edge_open_list() override;
 };
 
 /*

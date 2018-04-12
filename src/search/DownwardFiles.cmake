@@ -92,6 +92,7 @@ fast_downward_plugin(
         open_lists/open_list.cc
         open_lists/open_list_factory.cc
         open_lists/pareto_open_list.cc
+        open_lists/ra_open_list_factory.cc
         open_lists/random_access_open_list.cc
         open_lists/standard_scalar_open_list.cc
         open_lists/tiebreaking_open_list.cc
