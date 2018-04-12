@@ -7,7 +7,7 @@
 #include "../pruning_method.h"
 #include "../successor_generator.h"
 
-#include "../open_lists/open_list_factory.h"
+#include "../open_lists/ra_alternation_open_list.h"
 #include "../utils/memory.h"
 
 #include <random>
@@ -22,6 +22,7 @@ LearningSearch::LearningSearch(const Options &opts)
       open_list(opts.get<shared_ptr<RAOpenListFactory>>("ra_open")->
         create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
+      preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       rng(0),
       learning_log("rl-log.txt") {
     
@@ -36,6 +37,9 @@ void LearningSearch::initialize() {
 
     set<Heuristic*> hset;
     open_list->get_involved_heuristics(hset);
+
+    hset.insert(preferred_operator_heuristics.begin(),
+        preferred_operator_heuristics.end());
 
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
@@ -97,11 +101,17 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
 
+    // Like in EagerSearch, this evaluates the expanded state (again) to get preferred ops.
+    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
+        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+
     ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        process_state(node, state, op, succ_state);
+        bool is_preferred = preferred_operators.contains(op);
+        process_state(node, state, op, succ_state, is_preferred);
     }
 
     ++step_counter;
@@ -124,11 +134,18 @@ SearchStatus LearningSearch::rollout_step() {
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
     
     // Fully expand the processed state
+
+    // Get preferred operators
+    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
+        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+    
     ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        process_state(node, state, op, succ_state);
+        bool is_preferred = preferred_operators.contains(op);
+        process_state(node, state, op, succ_state, is_preferred);
     }
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
@@ -149,7 +166,13 @@ SearchStatus LearningSearch::rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        process_state(node, rollout_state, op, succ_state);
+        // Get preferred operators for the state
+        EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+        preferred_operators =
+            collect_preferred_operators(eval_context, preferred_operator_heuristics);
+        
+        bool is_preferred = preferred_operators.contains(op);
+        process_state(node, rollout_state, op, succ_state, is_preferred);
         if(expansions_without_progress == 0)
             break;
         rollout_state = succ_state;
@@ -176,11 +199,18 @@ SearchStatus LearningSearch::preferred_rollout_step() {
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
     
     // Fully expand the processed state
+
+    // Get preferred operators
+    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
+        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+
     ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        process_state(node, state, op, succ_state);
+        bool is_preferred = preferred_operators.contains(op);
+        process_state(node, state, op, succ_state, is_preferred);
     }
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
@@ -188,10 +218,6 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         return IN_PROGRESS;
     }
     
-    // Like in EagerSearch, this evaluates the expanded state (again) to get preferred ops
-    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
-    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
-        collect_preferred_operators(eval_context, heuristics);
     preferred_operators.shuffle(*g_rng());
 
     // Perform a preferred operators rollout from the expanded state
@@ -211,7 +237,7 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        process_state(node, rollout_state, *it, succ_state);
+        process_state(node, rollout_state, *it, succ_state, true);
         if (expansions_without_progress == 0)
             break;
         
@@ -302,7 +328,7 @@ void LearningSearch::update_routine() {
 }
 
 void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
-    const GlobalOperator *op, const GlobalState &succ_state) {
+    const GlobalOperator *op, const GlobalState &succ_state, bool is_preferred) {
     
     SearchNode succ_node = search_space.get_node(succ_state);
 
@@ -320,7 +346,7 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
         int succ_g = node.get_g() + get_adjusted_cost(*op);
 
         // no preferred operators for now
-        EvaluationContext eval_context(succ_state, succ_g, false, &statistics);
+        EvaluationContext eval_context(succ_state, succ_g, is_preferred, &statistics);
         statistics.inc_evaluated_states();
 
         if (open_list->is_dead_end(eval_context)) {
@@ -349,7 +375,7 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
             succ_node.reopen(node, op);
 
             EvaluationContext eval_context(succ_state, succ_node.get_g(),
-                false, &statistics);
+                is_preferred, &statistics);
                 open_list->insert(eval_context, succ_state.get_id());
         } else {
             // As in eager_search.cc, if nodes aren't reopened we only change
@@ -374,18 +400,48 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
 //     }
 // }
 
-shared_ptr<RAOpenListFactory> LearningSearch::create_ra_open_list_factory(
-    const Options &options) {
-    const vector<ScalarEvaluator *> evals =
-        options.get_list<ScalarEvaluator *>("evals");
+shared_ptr<RAOpenListFactory> LearningSearch::create_simple_ra_open_list_factory(
+    ScalarEvaluator *eval, bool pref_only) {
 
     Options state_list_opts;
-    // At the moment we only support a single heuristic
-    state_list_opts.set("eval", evals[0]);
-    state_list_opts.set("pref_only", false);
+    state_list_opts.set("eval", eval);
+    state_list_opts.set("pref_only", pref_only);
     state_list_opts.set("epsilon", 0.2);
     
     return make_shared<SimpleRandomAccessOpenListFactory>(state_list_opts);
+}
+
+shared_ptr<RAOpenListFactory> LearningSearch::create_ra_alternation_open_list_factory(
+    const vector<shared_ptr<RAOpenListFactory>> &subfactories, int boost) {
+    
+    Options options;
+    options.set("sublists", subfactories);
+    options.set("boost", boost);
+    return make_shared<RAAlternationOpenListFactory>(options);
+}
+
+
+shared_ptr<RAOpenListFactory> LearningSearch::create_ra_open_list_factory (
+    const Options &options) {
+    
+    const vector<ScalarEvaluator *> &evals = options.get_list<ScalarEvaluator*>("evals");
+    const vector<Heuristic *> &preferred_heuristics = options.get_list<Heuristic*>("preferred");
+    const int boost = options.get<int>("boost");
+
+    if (evals.size() == 1 && preferred_heuristics.empty()) {
+        return create_simple_ra_open_list_factory(evals[0], false);
+    } else {
+        vector<shared_ptr<RAOpenListFactory>> subfactories;
+        for (ScalarEvaluator *evaluator: evals) {
+            subfactories.push_back(
+                create_simple_ra_open_list_factory(evaluator, false));
+            if (!preferred_heuristics.empty()) {
+                subfactories.push_back(
+                    create_simple_ra_open_list_factory(evaluator, true));
+            }
+        }
+        return create_ra_alternation_open_list_factory(subfactories, boost);
+    }
 }
 
 void add_pruning_option(OptionParser &parser) {

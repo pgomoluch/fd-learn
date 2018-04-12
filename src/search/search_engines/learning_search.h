@@ -31,6 +31,7 @@ class LearningSearch : public SearchEngine {
     std::unique_ptr<RandomAccessStateOpenList> open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
+    std::vector<Heuristic*> preferred_operator_heuristics;
     unsigned step_counter = 0;
     unsigned expansions_without_progress = 0;
     int best_h = -1;
@@ -48,7 +49,8 @@ class LearningSearch : public SearchEngine {
     StateID get_best_state();
     StateID get_randomized_state();
     void process_state(const SearchNode &node, const GlobalState &state,
-        const GlobalOperator *op, const GlobalState &succ_state);
+        const GlobalOperator *op, const GlobalState &succ_state,
+        bool is_preferred = false);
 
     // High-level actions
     typedef SearchStatus (LearningSearch::*Action)();
@@ -77,6 +79,10 @@ public:
     virtual void print_statistics() const override;
 
     static std::shared_ptr<RAOpenListFactory> create_ra_open_list_factory(const Options &options);
+    static std::shared_ptr<RAOpenListFactory> create_simple_ra_open_list_factory(
+        ScalarEvaluator *eval, bool pref_only);
+    static std::shared_ptr<RAOpenListFactory> create_ra_alternation_open_list_factory(
+        const std::vector<std::shared_ptr<RAOpenListFactory>> &subfactories, int boost);
 };
 
 }
