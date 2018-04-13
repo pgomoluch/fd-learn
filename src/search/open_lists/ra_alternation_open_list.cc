@@ -41,6 +41,9 @@ public:
         EvaluationContext &eval_context) const override;
     virtual bool is_reliable_dead_end(
         EvaluationContext &eval_context) const override;
+
+private:
+    int find_best_list();
 };
 
 
@@ -69,13 +72,7 @@ Entry RAAlternationOpenList<Entry>::remove_min(vector<int> *key) {
         cerr << "not implemented -- see msg639 in the tracker" << endl;
         utils::exit_with(ExitCode::UNSUPPORTED);
     }
-    int best = -1;
-    for (size_t i = 0; i < open_lists.size(); ++i) {
-        if (!open_lists[i]->empty() &&
-            (best == -1 || priorities[i] < priorities[best])) {
-            best = i;
-        }
-    }
+    int best = find_best_list();
     assert(best != -1);
     const auto &best_list = open_lists[best];
     assert(!best_list->empty());
@@ -83,15 +80,32 @@ Entry RAAlternationOpenList<Entry>::remove_min(vector<int> *key) {
     return best_list->remove_min(nullptr);
 }
 
-// TODO: Replace dummy implementations of remove_random and remove_epsilon.
 template<class Entry>
 Entry RAAlternationOpenList<Entry>::remove_random(vector<int> *key) {
-    return remove_min(key);
+    if (key) {
+        cerr << "not implemented -- see msg639 in the tracker" << endl;
+        utils::exit_with(ExitCode::UNSUPPORTED);
+    }
+    int best = find_best_list();
+    assert(best != -1);
+    const auto &best_list = open_lists[best];
+    assert(!best_list->empty());
+    ++priorities[best];
+    return best_list->remove_random(nullptr);
 }
 
 template<class Entry>
 Entry RAAlternationOpenList<Entry>::remove_epsilon(vector<int> *key) {
-    return remove_min(key);
+    if (key) {
+        cerr << "not implemented -- see msg639 in the tracker" << endl;
+        utils::exit_with(ExitCode::UNSUPPORTED);
+    }
+    int best = find_best_list();
+    assert(best != -1);
+    const auto &best_list = open_lists[best];
+    assert(!best_list->empty());
+    ++priorities[best];
+    return best_list->remove_epsilon(nullptr);
 }
 
 template<class Entry>
@@ -142,6 +156,19 @@ bool RAAlternationOpenList<Entry>::is_reliable_dead_end(
         if (sublist->is_reliable_dead_end(eval_context))
             return true;
     return false;
+}
+
+template<class Entry>
+int RAAlternationOpenList<Entry>::find_best_list()
+{
+    int best = -1;
+    for (size_t i = 0; i < open_lists.size(); ++i) {
+        if (!open_lists[i]->empty() &&
+            (best == -1 || priorities[i] < priorities[best])) {
+            best = i;
+        }
+    }
+    return best;
 }
 
 
