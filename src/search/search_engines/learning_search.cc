@@ -19,8 +19,8 @@ namespace learning_search {
 LearningSearch::LearningSearch(const Options &opts)
     : SearchEngine(opts),
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
-      open_list(opts.get<shared_ptr<RAOpenListFactory>>("ra_open")->
-        create_state_open_list()),
+      open_list_factory(opts.get<shared_ptr<RAOpenListFactory>>("ra_open")),
+      global_open_list(open_list_factory->create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       rng(0),
@@ -29,6 +29,8 @@ LearningSearch::LearningSearch(const Options &opts)
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
             opts.get_list<ScalarEvaluator *>("evals");
+    
+    open_list = global_open_list.get();
 }
 
 void LearningSearch::initialize() {
@@ -75,6 +77,7 @@ void LearningSearch::print_statistics() const {
 SearchStatus LearningSearch::step() {
     if (step_counter % STEP_SIZE == 0)
         update_routine();
+    ++step_counter;
     return (this->*actions[current_action_id])();
 }
 
@@ -114,7 +117,6 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
         process_state(node, state, op, succ_state, is_preferred);
     }
 
-    ++step_counter;
     return IN_PROGRESS;
 }
 
@@ -148,10 +150,8 @@ SearchStatus LearningSearch::rollout_step() {
         process_state(node, state, op, succ_state, is_preferred);
     }
 
-    if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
-        ++step_counter;
+    if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
-    }
     
     // Perform a stochastic rollout from expanded state
     const GlobalOperator *op = applicable_ops[rng() % applicable_ops.size()];
@@ -179,7 +179,6 @@ SearchStatus LearningSearch::rollout_step() {
     }
 
     learning_log << endl;
-    ++step_counter;
     return IN_PROGRESS;
 }
 
@@ -213,10 +212,8 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         process_state(node, state, op, succ_state, is_preferred);
     }
 
-    if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE) {
-        ++step_counter;
+    if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
-    }
     
     preferred_operators.shuffle(*g_rng());
 
@@ -248,14 +245,61 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         rollout_state = succ_state;
     }
     learning_log << endl;
-    ++step_counter;
     return IN_PROGRESS;
+}
+
+SearchStatus LearningSearch::local_step() {
+    if (step_counter % STEP_SIZE == 1) {
+        // Create a new local queue and switch
+        if (open_list->empty())
+            return FAILED;
+
+        StateID id = get_best_state();
+        GlobalState state = state_registry.lookup_state(id);
+        SearchNode node = search_space.get_node(state);
+
+        local_open_list = open_list_factory->create_state_open_list();
+        EvaluationContext eval_context(state, node.get_g(), true, &statistics);
+        local_open_list->insert(eval_context, id);
+        
+        open_list = local_open_list.get();
+    }
+    SearchStatus status = simple_step(false);
+    // When local search fails, try to get another state from the global queue
+    if (status == FAILED) {
+        if (global_open_list->empty())
+            return FAILED;
+        
+        StateID id = global_open_list->remove_min();
+        GlobalState state = state_registry.lookup_state(id);
+        SearchNode node = search_space.get_node(state);
+        EvaluationContext eval_context(state, node.get_g(), true, &statistics);
+        local_open_list->insert(eval_context, id);
+        status = IN_PROGRESS;
+    }
+    if (step_counter % STEP_SIZE == 0) {
+        // Merge the local queue into the global one and switch
+        merge_local_list();
+        open_list = global_open_list.get();
+    }
+    return status;
+}
+
+void LearningSearch::merge_local_list() {
+    while (!local_open_list->empty()) {
+        StateID id = local_open_list->remove_min();
+        GlobalState state = state_registry.lookup_state(id);
+        SearchNode node = search_space.get_node(state);
+        // None of the local search states are preferred
+        EvaluationContext eval_context(state, node.get_g(), false, &statistics);
+        global_open_list->insert(eval_context, id);
+    }
 }
 
 pair<SearchNode, bool> LearningSearch::fetch_next_node(bool randomized) {
     while (true) {
         if (open_list->empty()) {
-            cout << "Completely explored state space -- no solution!" << endl;
+            cout << "State queue is empty -- no solution!" << endl;
             // HACK after eager_search.cc, because there's no default constructor
             // for SearchNode
             const GlobalState &initial_state = state_registry.get_initial_state();

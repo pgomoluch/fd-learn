@@ -4,6 +4,7 @@
 #include "../search_engine.h"
 
 #include "../open_lists/open_list.h"
+#include "../open_lists/ra_alternation_open_list.h"
 #include "../open_lists/simple_random_access_open_list.h"
 
 #include <random>
@@ -28,7 +29,10 @@ class LearningSearch : public SearchEngine {
     const int UNIT_REWARD = 4;
     const unsigned ROLLOUT_LENGTH = 20;
     const unsigned STALL_SIZE = 1000;
-    std::unique_ptr<RandomAccessStateOpenList> open_list;
+    RandomAccessStateOpenList *open_list;
+    std::shared_ptr<RAOpenListFactory> open_list_factory;
+    std::unique_ptr<RandomAccessStateOpenList> local_open_list;
+    std::unique_ptr<RandomAccessStateOpenList> global_open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     std::vector<Heuristic*> preferred_operator_heuristics;
@@ -43,6 +47,7 @@ class LearningSearch : public SearchEngine {
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
     void update_routine();
+    void merge_local_list();
     
     SearchStatus simple_step(bool randomized);
     std::pair<SearchNode, bool> fetch_next_node(bool randomized);
@@ -59,13 +64,16 @@ class LearningSearch : public SearchEngine {
     SearchStatus epsilon_greedy_step();
     SearchStatus rollout_step();
     SearchStatus preferred_rollout_step();
+    SearchStatus local_step();
 
     std::vector<Action> actions = {
         &LearningSearch::greedy_step,
         &LearningSearch::epsilon_greedy_step,
         &LearningSearch::rollout_step,
-        &LearningSearch::preferred_rollout_step};
-    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
+        &LearningSearch::preferred_rollout_step,
+        &LearningSearch::local_step};
+    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
+        INITIAL_WEIGHT, INITIAL_WEIGHT};
     std::deque<int> past_actions;
     int current_action_id = 0;
 
