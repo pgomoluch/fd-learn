@@ -14,6 +14,8 @@ do
     base_counter=$((base_counter+1))
     echo "Trying ${p}..."
     fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p $2"
+    # LAMA-first
+    #fd_command="../fast-downward.py --build=release64 --alias lama-first $1/domain.pddl $p"
     echo $fd_command
     timeout $3 $fd_command > covtest-tmp-result
     if [ $? -eq 0 ]

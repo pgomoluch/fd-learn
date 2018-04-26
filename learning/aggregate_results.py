@@ -1,16 +1,20 @@
 #!/usr/bin/python3
 
-# Usage: ./aggregate_results.py <results directory> <CSV output file>
+# Usage: ./aggregate_results.py <results directory> <CSV output file> <plot directory>
 
 import os
 import re
 import sys
 
+import matplotlib.pyplot as plt
+
+TIMEOUT = 60.0
 
 class Result:
-    def __init__(self, solved, costs):
+    def __init__(self, solved, costs, times):
         self.solved = solved
         self.costs = costs
+        self.times = times
         self.avg_cost = 0.0
         self.ipc_score = 0.0
 
@@ -24,11 +28,15 @@ def extract_results(filename):
     m2 = re.search('[0-9]+', m.group(0))
     n_solved = int(m2.group(0))
     
-    m = re.search('PLAN COSTS:\n(([0-9]+|F) )+', file_content)
-    m2 = re.search('(([0-9]+|F) )+', m.group(0))
+    m = re.search('PLAN COSTS:\n(([0-9]+|F) )+([0-9]+|F)', file_content)
+    m2 = re.search('(([0-9]+|F) )+([0-9]+|F)', m.group(0))
     costs = m2.group(0).split()
     
-    return Result(n_solved, costs)
+    m = re.search('SEARCH TIMES:\n((([0-9\.]+s)|F) )+(([0-9\.]+s)|F)', file_content)
+    times_string = m.group(0).replace('SEARCH TIMES:\n','').replace('s', '').replace('F', '')
+    times = [float(x) for x in times_string.split()]
+    
+    return Result(n_solved, costs, times)
 
 def numeric_ids(entries):
     result = set()
@@ -52,6 +60,7 @@ def min_lists(l1, l2):
 
 result_dir = sys.argv[1]
 aggregate_file = sys.argv[2]
+plot_dir = sys.argv[3]
 
 # Fill a dictrionary of results indexed by configuration and domain
 
@@ -69,6 +78,7 @@ for conf in os.listdir(result_dir):
 
 # Find probelms solved by all configurations and compute average plan quality and IPC score
 
+all_times = dict()
 for domain in all_domains:
     # Find the problems and cheapest plans
     id_set = None
@@ -92,7 +102,30 @@ for domain in all_domains:
         partial_scores = [ x/y if x != float('inf') else 0.0
             for (x,y) in zip(lowest_costs, costs) ]
         all_results[conf][domain].ipc_score = sum(partial_scores)
+    # Create the progress plots
+    for conf in all_results:
+        result = all_results[conf][domain]
+        times = sorted(result.times)
+        if conf in all_times:
+            all_times[conf] += times
+        else:
+            all_times[conf] = times
+        x = [0.0] + times + [TIMEOUT]
+        y = list(range(len(times))) + 2 * [len(times)]
+        plt.step(x, y, where='post', label=conf)
+    plt.legend(loc='upper left', bbox_to_anchor=(1,1))
+    plt.savefig(os.path.join(plot_dir, domain), bbox_inches='tight')
+    plt.clf()
 
+# Create the combined progress plot
+for conf in all_times:
+    times = sorted(all_times[conf])
+    x = [0.0] + times + [TIMEOUT]
+    y = list(range(len(times))) + 2 * [len(times)]
+    plt.step(x, y, where='post', label=conf)
+plt.legend(loc='upper left', bbox_to_anchor=(1,1))
+plt.savefig(os.path.join(plot_dir, 'combined'), bbox_inches='tight')
+plt.clf()
 
 # Generate a CSV file
 
