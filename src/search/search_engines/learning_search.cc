@@ -340,6 +340,7 @@ void LearningSearch::update_routine() {
     int reward = 0;
     if (step_counter > 0) {
         reward = previous_best_h - best_h;
+        previous_best_h = best_h;
         //open_list->reset_reward();
 
         if (reward > 0) {
