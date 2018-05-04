@@ -7,8 +7,9 @@
 #include "../open_lists/ra_alternation_open_list.h"
 #include "../open_lists/simple_random_access_open_list.h"
 
-#include <random>
+#include <chrono>
 #include <deque>
+#include <random>
 
 #include <fstream>
 
@@ -82,6 +83,7 @@ class LearningSearch : public SearchEngine {
     int current_action_id = 0;
     std::uniform_real_distribution<> real_dist;
     std::uniform_int_distribution<> int_dist;
+    std::chrono::steady_clock::time_point action_start;
 
 protected:
     virtual void initialize() override;

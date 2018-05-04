@@ -11,7 +11,6 @@
 #include "../utils/memory.h"
 
 #include <iomanip>
-#include <random>
 
 using namespace std;
 
@@ -348,7 +347,6 @@ void LearningSearch::update_routine() {
         weights[current_action_id] =
             (1 - LEARNING_RATE) * weights[current_action_id]
             + LEARNING_RATE * (reward > 0);
-    
     }
     
     if (real_dist(rng) < EPSILON)
@@ -359,12 +357,20 @@ void LearningSearch::update_routine() {
         current_action_id = distance(weights.begin(), max_element(weights.begin(), weights.end()));
 
     // Dev logging
-    cout << "Reward: " << reward << endl;
+    chrono::steady_clock::time_point now = chrono::steady_clock::now();
+    if (step_counter > 0) {
+        cout << "Reward: " << reward ;
+        cout << ", Duration: "
+            << chrono::duration_cast<chrono::milliseconds>(now - action_start).count()
+            << endl;
+    }
     cout << "Weights: " << setprecision(3);
     for(double d: weights)
         cout << d << " ";
     cout << ", Choice: " << current_action_id << ", ";
     cout << "ENP: " << expansions_without_progress << ", ";
+
+    action_start = now;
 }
 
 void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
