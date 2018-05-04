@@ -23,12 +23,17 @@ using SimpleRandomAccessStateOpenList = SimpleRandomAccessOpenList<StateOpenList
 
 class LearningSearch : public SearchEngine {
     const bool reopen_closed_nodes;
+    
+    // Subroutine parameters
     const unsigned STEP_SIZE = 100;
-    const int INITIAL_WEIGHT = 40;
-    const unsigned REWARD_WINDOW = 2;
-    const int UNIT_REWARD = 4;
-    const unsigned ROLLOUT_LENGTH = 20;
     const unsigned STALL_SIZE = 1000;
+    const unsigned ROLLOUT_LENGTH = 20;
+
+    // Learning hyperparameters
+    const double LEARNING_RATE = 0.2;
+    const double EPSILON = 0.5;
+    const double INITIAL_WEIGHT = 0.5;
+
     RandomAccessStateOpenList *open_list;
     std::shared_ptr<RAOpenListFactory> open_list_factory;
     std::unique_ptr<RandomAccessStateOpenList> local_open_list;
@@ -72,10 +77,11 @@ class LearningSearch : public SearchEngine {
         &LearningSearch::rollout_step,
         &LearningSearch::preferred_rollout_step,
         &LearningSearch::local_step};
-    std::vector<int> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
+    std::vector<double> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
         INITIAL_WEIGHT, INITIAL_WEIGHT};
-    std::deque<int> past_actions;
     int current_action_id = 0;
+    std::uniform_real_distribution<> real_dist;
+    std::uniform_int_distribution<> int_dist;
 
 protected:
     virtual void initialize() override;

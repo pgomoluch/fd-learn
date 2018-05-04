@@ -10,6 +10,7 @@
 #include "../open_lists/ra_alternation_open_list.h"
 #include "../utils/memory.h"
 
+#include <iomanip>
 #include <random>
 
 using namespace std;
@@ -24,7 +25,9 @@ LearningSearch::LearningSearch(const Options &opts)
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       rng(0),
-      learning_log("rl-log.txt") {
+      learning_log("rl-log.txt"),
+      real_dist(0.0, 1.0),
+      int_dist(0, actions.size()-1) {
     
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
@@ -341,33 +344,25 @@ void LearningSearch::update_routine() {
     if (step_counter > 0) {
         reward = previous_best_h - best_h;
         previous_best_h = best_h;
-        //open_list->reset_reward();
-
-        if (reward > 0) {
-            int update = UNIT_REWARD;
-            // reward the recent action
-            weights[current_action_id] += update;
-            // reward up to REWARD_WINDOW previous actions
-            for (auto it = past_actions.begin(); it != past_actions.end(); ++it) {
-                update /= 2;
-                weights[*it] += update;
-            }
-        }
+        
+        weights[current_action_id] =
+            (1 - LEARNING_RATE) * weights[current_action_id]
+            + LEARNING_RATE * (reward > 0);
     
-        // remember up to REWARD_WINDOW previous actions
-        past_actions.push_front(current_action_id);
-        if (past_actions.size() > REWARD_WINDOW)
-            past_actions.pop_back();
     }
-    // choose the next action
-    discrete_distribution<> d(weights.begin(), weights.end());
-    current_action_id = d(rng);
     
+    if (real_dist(rng) < EPSILON)
+        // choose a random action
+        current_action_id = int_dist(rng);
+    else
+        // choose the action with the highest weight
+        current_action_id = distance(weights.begin(), max_element(weights.begin(), weights.end()));
+
     // Dev logging
     cout << "Reward: " << reward << endl;
-    cout << "Weights: ";
-    for(int i: weights)
-        cout << i << " ";
+    cout << "Weights: " << setprecision(3);
+    for(double d: weights)
+        cout << d << " ";
     cout << ", Choice: " << current_action_id << ", ";
     cout << "ENP: " << expansions_without_progress << ", ";
 }
