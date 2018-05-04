@@ -48,6 +48,14 @@ void LearningSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
+    ifstream weight_file("weights.txt");
+    if(weight_file) {
+        for (double &w: weights)
+            weight_file >> w;
+        weight_file.close();
+    }
+
+
     const GlobalState &initial_state = state_registry.get_initial_state();
     for (Heuristic *h: heuristics) {
         h->notify_initial_state(initial_state);
@@ -100,8 +108,10 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
     SearchNode node = n.first;
 
     GlobalState state = node.get_state();
-    if (check_goal_and_set_plan(state))
+    if (check_goal_and_set_plan(state)) {
+        terminate_learning();
         return SOLVED;
+    }
 
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
@@ -131,8 +141,10 @@ SearchStatus LearningSearch::rollout_step() {
     SearchNode node = n.first;
 
     GlobalState state = node.get_state();
-    if (check_goal_and_set_plan(state))
+    if (check_goal_and_set_plan(state)) {
+        terminate_learning();
         return SOLVED;
+    }
     
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
@@ -193,8 +205,11 @@ SearchStatus LearningSearch::preferred_rollout_step() {
     SearchNode node = n.first;
 
     GlobalState state = node.get_state();
-    if (check_goal_and_set_plan(state))
+    if (check_goal_and_set_plan(state)) {
+        terminate_learning();
         return SOLVED;
+    }
+        
     
     vector<const GlobalOperator*> applicable_ops;
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
@@ -371,6 +386,14 @@ void LearningSearch::update_routine() {
     cout << "ENP: " << expansions_without_progress << ", ";
 
     action_start = now;
+}
+
+void LearningSearch::terminate_learning() {
+    update_routine(); // reward the last routine
+    ofstream weights_file("weights.txt");
+    for (double w: weights)
+        weights_file << w << " ";
+    weights_file.close();
 }
 
 void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
