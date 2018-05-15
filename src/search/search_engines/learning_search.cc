@@ -13,6 +13,7 @@
 #include <iomanip>
 
 using namespace std;
+using namespace std::chrono;
 
 namespace learning_search {
 
@@ -21,9 +22,10 @@ LearningSearch::LearningSearch(const Options &opts)
       reopen_closed_nodes(opts.get<bool>("reopen_closed")),
       open_list_factory(opts.get<shared_ptr<RAOpenListFactory>>("ra_open")),
       global_open_list(open_list_factory->create_state_open_list()),
+      local_open_list(nullptr),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      rng(chrono::system_clock::now().time_since_epoch().count()),
+      rng(system_clock::now().time_since_epoch().count()),
       learning_log("rl-log.txt"),
       real_dist(0.0, 1.0),
       int_dist(0, actions.size()-1) {
@@ -85,7 +87,8 @@ void LearningSearch::print_statistics() const {
 }
 
 SearchStatus LearningSearch::step() {
-    if (step_counter % STEP_SIZE == 0)
+    steady_clock::time_point now = steady_clock::now();
+    if (duration_cast<milliseconds>(now - action_start).count() >= ACTION_DURATION)
         update_routine();
     ++step_counter;
     return (this->*actions[current_action_id])();
@@ -267,7 +270,7 @@ SearchStatus LearningSearch::preferred_rollout_step() {
 }
 
 SearchStatus LearningSearch::local_step() {
-    if (step_counter % STEP_SIZE == 1) {
+    if (!local_open_list) {
         // Create a new local queue and switch
         if (open_list->empty())
             return FAILED;
@@ -294,11 +297,6 @@ SearchStatus LearningSearch::local_step() {
         EvaluationContext eval_context(state, node.get_g(), true, &statistics);
         local_open_list->insert(eval_context, id);
         status = IN_PROGRESS;
-    }
-    if (step_counter % STEP_SIZE == 0) {
-        // Merge the local queue into the global one and switch
-        merge_local_list();
-        open_list = global_open_list.get();
     }
     return status;
 }
@@ -355,6 +353,13 @@ StateID LearningSearch::get_randomized_state() {
 }
 
 void LearningSearch::update_routine() {
+    // Merge the local list if any and switch to the global one.
+    if (local_open_list) {
+        merge_local_list();
+        local_open_list = nullptr;
+        open_list = global_open_list.get();
+    }
+    
     int reward = 0;
     if (step_counter > 0) {
         reward = previous_best_h - best_h;
@@ -373,11 +378,11 @@ void LearningSearch::update_routine() {
         current_action_id = distance(weights.begin(), max_element(weights.begin(), weights.end()));
 
     // Dev logging
-    chrono::steady_clock::time_point now = chrono::steady_clock::now();
+    steady_clock::time_point now = steady_clock::now();
     if (step_counter > 0) {
         cout << "Reward: " << reward ;
         cout << ", Duration: "
-            << chrono::duration_cast<chrono::milliseconds>(now - action_start).count()
+            << duration_cast<milliseconds>(now - action_start).count()
             << endl;
     }
     cout << "Weights: " << setprecision(3);

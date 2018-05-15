@@ -26,7 +26,7 @@ class LearningSearch : public SearchEngine {
     const bool reopen_closed_nodes;
     
     // Subroutine parameters
-    const unsigned STEP_SIZE = 100;
+    const unsigned ACTION_DURATION = 100; // milliseconds
     const unsigned STALL_SIZE = 1000;
     const unsigned ROLLOUT_LENGTH = 20;
 
@@ -37,8 +37,8 @@ class LearningSearch : public SearchEngine {
 
     RandomAccessStateOpenList *open_list;
     std::shared_ptr<RAOpenListFactory> open_list_factory;
-    std::unique_ptr<RandomAccessStateOpenList> local_open_list;
     std::unique_ptr<RandomAccessStateOpenList> global_open_list;
+    std::unique_ptr<RandomAccessStateOpenList> local_open_list;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     std::vector<Heuristic*> preferred_operator_heuristics;
