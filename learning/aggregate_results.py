@@ -123,8 +123,10 @@ for conf in all_times:
     x = [0.0] + times + [TIMEOUT]
     y = list(range(len(times))) + 2 * [len(times)]
     plt.step(x, y, where='post', label=conf)
-plt.legend(loc='upper left', bbox_to_anchor=(1,1))
-plt.savefig(os.path.join(plot_dir, 'combined'), bbox_inches='tight')
+plt.ylabel('problems solved')
+plt.xlabel('time [s]')
+plt.legend(loc='lower right', bbox_to_anchor=(1,0)) # 'upper left', (1,1)
+plt.savefig(os.path.join(plot_dir, 'combined'), bbox_inches='tight', format="svg")
 plt.clf()
 
 # Generate a CSV file

@@ -31,7 +31,7 @@ class LearningSearch : public SearchEngine {
     const unsigned ROLLOUT_LENGTH = 20;
 
     // Learning hyperparameters
-    const double LEARNING_RATE = 0.2;
+    const double LEARNING_RATE = 0.001;
     const double EPSILON = 0.5;
     const double INITIAL_WEIGHT = 0.5;
 

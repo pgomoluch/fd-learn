@@ -23,7 +23,7 @@ LearningSearch::LearningSearch(const Options &opts)
       global_open_list(open_list_factory->create_state_open_list()),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
-      rng(0),
+      rng(chrono::system_clock::now().time_since_epoch().count()),
       learning_log("rl-log.txt"),
       real_dist(0.0, 1.0),
       int_dist(0, actions.size()-1) {
@@ -247,6 +247,7 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         }
         if (it == preferred_operators.end()) // no applicable operators
             break;
+
         GlobalState succ_state = state_registry.get_successor_state(rollout_state, **it);
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
