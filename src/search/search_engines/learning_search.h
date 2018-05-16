@@ -31,7 +31,6 @@ class LearningSearch : public SearchEngine {
     const unsigned ROLLOUT_LENGTH = 20;
 
     // Learning hyperparameters
-    const double LEARNING_RATE = 0.001;
     const double EPSILON = 0.5;
     const double INITIAL_WEIGHT = 0.5;
 
@@ -43,10 +42,12 @@ class LearningSearch : public SearchEngine {
     std::vector<Heuristic*> heuristics;
     std::vector<Heuristic*> preferred_operator_heuristics;
     unsigned step_counter = 0;
+    unsigned steps_at_action_start = 0;
     unsigned expansions_without_progress = 0;
     int best_h = -1;
     int previous_best_h = -1;
     int all_time_best_h = -1;
+    const double learning_rate;
     std::mt19937 rng;
     std::ofstream learning_log;
 

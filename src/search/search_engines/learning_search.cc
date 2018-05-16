@@ -25,6 +25,7 @@ LearningSearch::LearningSearch(const Options &opts)
       local_open_list(nullptr),
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
+      learning_rate(opts.get<double>("learning_rate")),
       rng(system_clock::now().time_since_epoch().count()),
       learning_log("rl-log.txt"),
       real_dist(0.0, 1.0),
@@ -39,6 +40,7 @@ LearningSearch::LearningSearch(const Options &opts)
 
 void LearningSearch::initialize() {
     cout << "Conducting learning search..." << endl;
+    cout << "The learning rate is " << learning_rate << endl;
     assert(open_list);
 
     set<Heuristic*> hset;
@@ -366,8 +368,8 @@ void LearningSearch::update_routine() {
         previous_best_h = best_h;
         
         weights[current_action_id] =
-            (1 - LEARNING_RATE) * weights[current_action_id]
-            + LEARNING_RATE * (reward > 0);
+            (1 - learning_rate) * weights[current_action_id]
+            + learning_rate * (reward > 0);
     }
     
     if (real_dist(rng) < EPSILON)
@@ -382,8 +384,8 @@ void LearningSearch::update_routine() {
     if (step_counter > 0) {
         cout << "Reward: " << reward ;
         cout << ", Duration: "
-            << duration_cast<milliseconds>(now - action_start).count()
-            << endl;
+            << duration_cast<milliseconds>(now - action_start).count();
+        cout << ", Steps: " << step_counter - steps_at_action_start << endl;
     }
     cout << "Weights: " << setprecision(3);
     for(double d: weights)
@@ -392,6 +394,7 @@ void LearningSearch::update_routine() {
     cout << "ENP: " << expansions_without_progress << ", ";
 
     action_start = now;
+    steps_at_action_start = step_counter;
 }
 
 void LearningSearch::terminate_learning() {
@@ -545,6 +548,7 @@ static SearchEngine *_parse(OptionParser &parser) {
     parser.add_option<int>(
         "boost",
         "boost value for preferred operator open lists", "0");
+    parser.add_option<double>("learning_rate", "the learning rate for RL", "0.001");
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
