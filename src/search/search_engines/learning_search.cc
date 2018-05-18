@@ -27,6 +27,7 @@ LearningSearch::LearningSearch(const Options &opts)
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       learning_rate(opts.get<double>("learning_rate")),
       rng(system_clock::now().time_since_epoch().count()),
+      //rng(0),
       learning_log("rl-log.txt"),
       real_dist(0.0, 1.0),
       int_dist(0, actions.size()-1) {
@@ -90,6 +91,7 @@ void LearningSearch::print_statistics() const {
 
 SearchStatus LearningSearch::step() {
     steady_clock::time_point now = steady_clock::now();
+    //if (step_counter % 100 == 0)
     if (duration_cast<milliseconds>(now - action_start).count() >= ACTION_DURATION)
         update_routine();
     ++step_counter;
@@ -372,17 +374,13 @@ void LearningSearch::update_routine() {
             + learning_rate * (reward > 0);
     }
     
-    if (real_dist(rng) < EPSILON)
-        // choose a random action
-        current_action_id = int_dist(rng);
-    else
-        // choose the action with the highest weight
-        current_action_id = distance(weights.begin(), max_element(weights.begin(), weights.end()));
+    current_action_id = epsilon_greedy_policy();
+    //current_action_id = proportional_policy();
 
     // Dev logging
     steady_clock::time_point now = steady_clock::now();
     if (step_counter > 0) {
-        cout << "Reward: " << reward ;
+        cout << "Reward: " << reward;
         cout << ", Duration: "
             << duration_cast<milliseconds>(now - action_start).count();
         cout << ", Steps: " << step_counter - steps_at_action_start << endl;
@@ -395,6 +393,19 @@ void LearningSearch::update_routine() {
 
     action_start = now;
     steps_at_action_start = step_counter;
+}
+
+int LearningSearch::epsilon_greedy_policy() {
+    if (real_dist(rng) < EPSILON)
+        // choose a random action
+        return int_dist(rng);
+    // choose the action with the highest weight
+    return distance(weights.begin(), max_element(weights.begin(), weights.end()));
+}
+
+int LearningSearch::proportional_policy() {
+    discrete_distribution<> dist(weights.begin(), weights.end());
+    return dist(rng);
 }
 
 void LearningSearch::terminate_learning() {
