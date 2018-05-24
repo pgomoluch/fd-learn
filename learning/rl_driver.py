@@ -1,11 +1,13 @@
 #!/usr/bin/python3
 
+import os
 import subprocess
 import sys
 import time
 
-conf = 'learning(ff,learning_rate=%f)'
-#conf = 'learning(ff(transform=adapt_costs(one)),learning_rate=%f)'
+#heuristic = 'h1=ff(transform=adapt_costs(one))'
+heuristic = 'h1=ff'
+search = 'learning(h1,learning_rate=%f)'
 learning_rate = 0.001
 transport_generator = '../../../IPC/own-transport/generator14L/city-generator.py'
 target_problem_time = 2.0
@@ -28,13 +30,23 @@ class TransportGenerator:
     def __init__(self):
         self.trucks = 3
         self.packages = 6
+        
+        self.nodes = 15
+        self.size = 1000
+        self.degree = 3
+        self.mindistance = 100
     
     def generate(self):
-        ipc_generator_command = ['python', transport_generator, '15', '1000', '3', '100', str(self.trucks), str(self.packages), str(time.time())]
+        seed = time.time()
+        ipc_generator_command = ['python', transport_generator, str(self.nodes), str(self.size),
+            str(self.degree), str(self.mindistance), str(self.trucks), str(self.packages), str(seed)]
         problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
         problem_file = open('problem.pddl', 'w')
         problem_file.write(problem)
         problem_file.close()
+        # Remove the tex file created by the generator
+        os.remove('city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex'
+            % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed)))
     
     def easier(self):
         if self.packages > 1:
@@ -57,7 +69,9 @@ while time.time() - start_time < training_time:
     problem_start = time.time()
     
     try:
-        subprocess.call(['../fast-downward.py', '--build', 'release64',  domain,  problem, '--search',  conf % learning_rate], timeout=10*target_problem_time)
+        subprocess.call(['../fast-downward.py', '--build', 'release64',  domain,  problem,
+            '--heuristic', heuristic, '--search',  search % learning_rate],
+            timeout=10*target_problem_time)
     except subprocess.TimeoutExpired:
         generator.easier()
         continue
