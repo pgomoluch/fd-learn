@@ -54,8 +54,12 @@ class LearningSearch : public SearchEngine {
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
     void update_routine();
-    int epsilon_greedy_policy();
+    
+    int uniform_policy();
     int proportional_policy();
+    int softmax_policy();
+    int epsilon_greedy_policy();
+    
     void terminate_learning();
     void merge_local_list();
     

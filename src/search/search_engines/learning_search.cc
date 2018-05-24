@@ -375,7 +375,6 @@ void LearningSearch::update_routine() {
     }
     
     current_action_id = epsilon_greedy_policy();
-    //current_action_id = proportional_policy();
 
     // Dev logging
     steady_clock::time_point now = steady_clock::now();
@@ -395,17 +394,37 @@ void LearningSearch::update_routine() {
     steps_at_action_start = step_counter;
 }
 
-int LearningSearch::epsilon_greedy_policy() {
-    if (real_dist(rng) < EPSILON)
-        // choose a random action
-        return int_dist(rng);
-    // choose the action with the highest weight
-    return distance(weights.begin(), max_element(weights.begin(), weights.end()));
+int LearningSearch::uniform_policy() {
+    return int_dist(rng);
 }
 
 int LearningSearch::proportional_policy() {
     discrete_distribution<> dist(weights.begin(), weights.end());
     return dist(rng);
+}
+
+int LearningSearch::softmax_policy() {
+    // TODO: Fine for weights up to 10, but consider a stable implementation. 
+    vector<double> probabilities;
+    probabilities.reserve(weights.size());
+    double sum = 0.0;
+    for (double w: weights) {
+        double p = exp(w);
+        probabilities.push_back(p);
+        sum += p;
+    }
+    for (double &p: probabilities)
+        p /= sum;
+    discrete_distribution<> dist(probabilities.begin(), probabilities.end());
+    return dist(rng);
+}
+
+int LearningSearch::epsilon_greedy_policy() {
+    if (real_dist(rng) < EPSILON)
+        // choose a random action
+        return uniform_policy();
+    // choose the action with the highest weight
+    return distance(weights.begin(), max_element(weights.begin(), weights.end()));
 }
 
 void LearningSearch::terminate_learning() {
