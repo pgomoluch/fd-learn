@@ -371,7 +371,7 @@ void LearningSearch::update_routine() {
         
         weights[current_action_id] =
             (1 - learning_rate) * weights[current_action_id]
-            + learning_rate * (reward > 0);
+            + learning_rate * reward;
     }
     
     current_action_id = epsilon_greedy_policy();
