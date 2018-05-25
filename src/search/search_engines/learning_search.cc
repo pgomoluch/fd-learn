@@ -108,6 +108,16 @@ SearchStatus LearningSearch::epsilon_greedy_step() {
 
 SearchStatus LearningSearch::simple_step(bool randomized) {
 
+    vector<const GlobalOperator*> applicable_ops;
+    algorithms::OrderedSet<const GlobalOperator *> preferred_ops;
+    StateID state_id = StateID::no_state;
+
+    return expand(randomized, state_id, applicable_ops, preferred_ops);
+}
+
+SearchStatus LearningSearch::expand(bool randomized, StateID &state_id, vector<const GlobalOperator*> &applicable_ops,
+    algorithms::OrderedSet<const GlobalOperator *> &preferred_ops) {
+    
     pair<SearchNode, bool> n = fetch_next_node(randomized);
     if (!n.second) {
         return FAILED;
@@ -120,19 +130,18 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
         return SOLVED;
     }
 
-    vector<const GlobalOperator*> applicable_ops;
+    state_id = state.get_id();
     g_successor_generator->generate_applicable_ops(state, applicable_ops);
 
     // Like in EagerSearch, this evaluates the expanded state (again) to get preferred ops.
     EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
-    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
-        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+    preferred_ops = collect_preferred_operators(eval_context, preferred_operator_heuristics);
 
     ++expansions_without_progress;
     for (const GlobalOperator *op: applicable_ops) {
         GlobalState succ_state = state_registry.get_successor_state(state, *op);
         statistics.inc_generated();
-        bool is_preferred = preferred_operators.contains(op);
+        bool is_preferred = preferred_ops.contains(op);
         process_state(node, state, op, succ_state, is_preferred);
     }
 
@@ -141,35 +150,15 @@ SearchStatus LearningSearch::simple_step(bool randomized) {
 
 SearchStatus LearningSearch::rollout_step() {
 
-    pair<SearchNode, bool> n = fetch_next_node(false);
-    if (!n.second) {
-        return FAILED;
-    }
-    SearchNode node = n.first;
-
-    GlobalState state = node.get_state();
-    if (check_goal_and_set_plan(state)) {
-        terminate_learning();
-        return SOLVED;
-    }
-    
     vector<const GlobalOperator*> applicable_ops;
-    g_successor_generator->generate_applicable_ops(state, applicable_ops);
-    
-    // Fully expand the processed state
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators;
+    StateID state_id = StateID::no_state;
 
-    // Get preferred operators
-    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
-    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
-        collect_preferred_operators(eval_context, preferred_operator_heuristics);
-    
-    ++expansions_without_progress;
-    for (const GlobalOperator *op: applicable_ops) {
-        GlobalState succ_state = state_registry.get_successor_state(state, *op);
-        statistics.inc_generated();
-        bool is_preferred = preferred_operators.contains(op);
-        process_state(node, state, op, succ_state, is_preferred);
-    }
+    SearchStatus status = expand(false, state_id, applicable_ops, preferred_operators);
+    if (status != IN_PROGRESS)
+        return status;
+
+    GlobalState state = state_registry.lookup_state(state_id);
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
@@ -205,36 +194,15 @@ SearchStatus LearningSearch::rollout_step() {
 
 SearchStatus LearningSearch::preferred_rollout_step() {
 
-    pair<SearchNode, bool> n = fetch_next_node(false);
-    if (!n.second) {
-        return FAILED;
-    }
-    SearchNode node = n.first;
-
-    GlobalState state = node.get_state();
-    if (check_goal_and_set_plan(state)) {
-        terminate_learning();
-        return SOLVED;
-    }
-        
-    
     vector<const GlobalOperator*> applicable_ops;
-    g_successor_generator->generate_applicable_ops(state, applicable_ops);
-    
-    // Fully expand the processed state
+    algorithms::OrderedSet<const GlobalOperator *> preferred_operators;
+    StateID state_id = StateID::no_state;
 
-    // Get preferred operators
-    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
-    algorithms::OrderedSet<const GlobalOperator *> preferred_operators =
-        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+    SearchStatus status = expand(false, state_id, applicable_ops, preferred_operators);
+    if (status != IN_PROGRESS)
+        return status;
 
-    ++expansions_without_progress;
-    for (const GlobalOperator *op: applicable_ops) {
-        GlobalState succ_state = state_registry.get_successor_state(state, *op);
-        statistics.inc_generated();
-        bool is_preferred = preferred_operators.contains(op);
-        process_state(node, state, op, succ_state, is_preferred);
-    }
+    GlobalState state = state_registry.lookup_state(state_id);
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;

@@ -64,6 +64,12 @@ class LearningSearch : public SearchEngine {
     void merge_local_list();
     
     SearchStatus simple_step(bool randomized);
+    
+    // The common part of greedy and rollout subroutines: gets one state from the queue and expands it.
+    // Sets state id, applicable and preferred operators. 
+    SearchStatus expand(bool randomized, StateID &state_id, std::vector<const GlobalOperator*> &applicable_ops,
+        algorithms::OrderedSet<const GlobalOperator *> &preferred_ops);
+    
     std::pair<SearchNode, bool> fetch_next_node(bool randomized);
     StateID get_best_state();
     StateID get_randomized_state();
