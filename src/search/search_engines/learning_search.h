@@ -73,9 +73,9 @@ class LearningSearch : public SearchEngine {
     std::pair<SearchNode, bool> fetch_next_node(bool randomized);
     StateID get_best_state();
     StateID get_randomized_state();
-    void process_state(const SearchNode &node, const GlobalState &state,
+    EvaluationContext process_state(const SearchNode &node, const GlobalState &state,
         const GlobalOperator *op, const GlobalState &succ_state,
-        bool is_preferred = false);
+        bool is_preferred = false, bool calculate_preferred = false);
 
     // High-level actions
     typedef SearchStatus (LearningSearch::*Action)();

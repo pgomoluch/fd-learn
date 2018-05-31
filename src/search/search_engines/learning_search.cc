@@ -158,14 +158,11 @@ SearchStatus LearningSearch::rollout_step() {
     if (status != IN_PROGRESS)
         return status;
 
-    GlobalState state = state_registry.lookup_state(state_id);
-
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
     
     // Perform a stochastic rollout from expanded state
-    const GlobalOperator *op = applicable_ops[rng() % applicable_ops.size()];
-    GlobalState rollout_state = state_registry.get_successor_state(state, *op);
+    GlobalState rollout_state = state_registry.lookup_state(state_id);
     for (unsigned i = 0; i < ROLLOUT_LENGTH; ++i) {
         vector<const GlobalOperator*> applicable_ops;
         g_successor_generator->generate_applicable_ops(rollout_state, applicable_ops);
@@ -176,13 +173,12 @@ SearchStatus LearningSearch::rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        // Get preferred operators for the state
-        EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
-        preferred_operators =
-            collect_preferred_operators(eval_context, preferred_operator_heuristics);
-        
         bool is_preferred = preferred_operators.contains(op);
-        process_state(node, rollout_state, op, succ_state, is_preferred);
+        EvaluationContext eval_context = process_state(node, rollout_state, op, succ_state, is_preferred, true);
+        // Get the preferred operators for the next iteration.
+        preferred_operators =
+             collect_preferred_operators(eval_context, preferred_operator_heuristics);
+
         if(expansions_without_progress == 0)
             break;
         rollout_state = succ_state;
@@ -227,11 +223,10 @@ SearchStatus LearningSearch::preferred_rollout_step() {
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
         learning_log << "#";
-        process_state(node, rollout_state, *it, succ_state, true);
+        EvaluationContext eval_context = process_state(node, rollout_state, *it, succ_state, true, true);
         if (expansions_without_progress == 0)
             break;
         
-        EvaluationContext eval_context(succ_state, node.get_g()+(*it)->get_cost(), false, &statistics, true);
         preferred_operators = collect_preferred_operators(eval_context, heuristics);
         preferred_operators.shuffle(*g_rng());
 
@@ -403,13 +398,17 @@ void LearningSearch::terminate_learning() {
     weights_file.close();
 }
 
-void LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
-    const GlobalOperator *op, const GlobalState &succ_state, bool is_preferred) {
+EvaluationContext LearningSearch::process_state(const SearchNode &node, const GlobalState &state,
+    const GlobalOperator *op, const GlobalState &succ_state, bool is_preferred, bool calculate_preferred) {
     
     SearchNode succ_node = search_space.get_node(succ_state);
+    // As in eager_search.cc, succ_node.get_g() isn't available yet
+    int succ_g = node.get_g() + get_adjusted_cost(*op);
+    // no preferred operators for now
+    EvaluationContext eval_context(succ_state, succ_g, is_preferred, &statistics, calculate_preferred);
 
     if (succ_node.is_dead_end())
-        return;
+        return eval_context;
 
     if (succ_node.is_new()) {
         for (Heuristic *h: heuristics) {
@@ -418,17 +417,13 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
     }
 
     if (succ_node.is_new()) {
-        // As in eager_search.cc, succ_node.get_g() isn't available yet
-        int succ_g = node.get_g() + get_adjusted_cost(*op);
-
-        // no preferred operators for now
-        EvaluationContext eval_context(succ_state, succ_g, is_preferred, &statistics);
+    
         statistics.inc_evaluated_states();
 
         if (open_list->is_dead_end(eval_context)) {
             succ_node.mark_as_dead_end();
             statistics.inc_dead_ends();
-            return;
+            return eval_context;
         }
         succ_node.open(node, op);
 
@@ -442,23 +437,25 @@ void LearningSearch::process_state(const SearchNode &node, const GlobalState &st
             }
         }
         open_list->insert(eval_context, succ_state.get_id());
+        return eval_context;
     } else if (succ_node.get_g() > node.get_g() + get_adjusted_cost(*op)) {
         // A new cheapest path to an open or closed states
+        EvaluationContext eval_context(succ_state, succ_node.get_g(), // why with the old g?
+                is_preferred, &statistics, calculate_preferred);
         if (reopen_closed_nodes) {
             if (succ_node.is_closed()) {
                 statistics.inc_reopened();
             }
             succ_node.reopen(node, op);
-
-            EvaluationContext eval_context(succ_state, succ_node.get_g(),
-                is_preferred, &statistics);
-                open_list->insert(eval_context, succ_state.get_id());
+            open_list->insert(eval_context, succ_state.get_id());
         } else {
             // As in eager_search.cc, if nodes aren't reopened we only change
             // the parent node.
             succ_node.update_parent(node, op);
         }
+        return eval_context;
     }
+    return eval_context;
 }
 
 // void LearningSearch::start_f_value_statistics(EvaluationContext &eval_context) {
