@@ -268,6 +268,59 @@ SearchStatus LearningSearch::local_step() {
     return status;
 }
 
+SearchStatus LearningSearch::depth_first_step() {
+
+    StateID state_id = StateID::no_state;
+    if (dfs_stack.empty()) {
+        pair<SearchNode, bool> n = fetch_next_node(false);
+        if (!n.second) {
+            return FAILED;
+        }
+        state_id = n.first.get_state().get_id();
+    } else {
+        state_id = dfs_stack.top();
+        dfs_stack.pop();
+    }
+
+    GlobalState state = state_registry.lookup_state(state_id);
+    SearchNode node = search_space.get_node(state);
+
+    if (check_goal_and_set_plan(state)) {
+        terminate_learning();
+        return SOLVED;
+    }
+
+    vector<const GlobalOperator*> applicable_ops;
+    g_successor_generator->generate_applicable_ops(state, applicable_ops);
+
+    // Like in EagerSearch, this evaluates the expanded state (again) to get preferred ops.
+    EvaluationContext eval_context(state, node.get_g(), false, &statistics, true);
+    algorithms::OrderedSet<const GlobalOperator *> preferred_ops =
+        collect_preferred_operators(eval_context, preferred_operator_heuristics);
+
+    ++expansions_without_progress;
+    vector<pair<StateID,int>> children;
+    for (const GlobalOperator *op: applicable_ops) {
+        GlobalState succ_state = state_registry.get_successor_state(state, *op);
+        statistics.inc_generated();
+        bool is_preferred = preferred_ops.contains(op);
+        bool is_new = search_space.get_node(succ_state).is_new();
+        EvaluationContext eval_context = process_state(node, state, op, succ_state, is_preferred);
+        if (is_new) {
+            int h = eval_context.get_heuristic_value(heuristics[0]);
+            children.push_back(pair<StateID,int>(succ_state.get_id(), h));
+        }
+    }
+    shuffle(children.begin(), children.end(), rng);
+    sort(children.begin(), children.end(),
+        [](const pair<StateID,int> &a, const pair<StateID,int> &b) {return a.second > b.second;});
+    for (pair<StateID,int> c: children) {
+        dfs_stack.push(c.first);
+    }
+
+    return IN_PROGRESS;
+}
+
 void LearningSearch::merge_local_list() {
     while (!local_open_list->empty()) {
         StateID id = local_open_list->remove_min();
@@ -326,6 +379,9 @@ void LearningSearch::update_routine() {
         local_open_list = nullptr;
         open_list = global_open_list.get();
     }
+    // Clear the DFS stack
+    while(!dfs_stack.empty())
+        dfs_stack.pop();
     
     int reward = 0;
     if (step_counter > 0) {

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <deque>
 #include <random>
+#include <stack>
 
 #include <fstream>
 
@@ -38,6 +39,7 @@ class LearningSearch : public SearchEngine {
     std::shared_ptr<RAOpenListFactory> open_list_factory;
     std::unique_ptr<RandomAccessStateOpenList> global_open_list;
     std::unique_ptr<RandomAccessStateOpenList> local_open_list;
+    std::stack<StateOpenListEntry> dfs_stack;
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     std::vector<Heuristic*> preferred_operator_heuristics;
@@ -85,15 +87,17 @@ class LearningSearch : public SearchEngine {
     SearchStatus rollout_step();
     SearchStatus preferred_rollout_step();
     SearchStatus local_step();
+    SearchStatus depth_first_step();
 
     std::vector<Action> actions = {
         &LearningSearch::greedy_step,
         &LearningSearch::epsilon_greedy_step,
         &LearningSearch::rollout_step,
         &LearningSearch::preferred_rollout_step,
-        &LearningSearch::local_step};
+        &LearningSearch::local_step,
+        &LearningSearch::depth_first_step};
     std::vector<double> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
-        INITIAL_WEIGHT, INITIAL_WEIGHT};
+        INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
     int current_action_id = 0;
     std::uniform_real_distribution<> real_dist;
     std::uniform_int_distribution<> int_dist;
