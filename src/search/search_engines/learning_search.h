@@ -50,13 +50,17 @@ class LearningSearch : public SearchEngine {
     int previous_best_h = -1;
     int all_time_best_h = -1;
     const double learning_rate;
+    double avg_reward = 0.0;
+    std::vector<int> rewards;
     std::mt19937 rng;
     std::ofstream learning_log;
 
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
     void update_routine();
-    
+    void gradient_update(const int action_id, const int reward);
+    std::vector<double> get_probabilities();
+
     int uniform_policy();
     int proportional_policy();
     int softmax_policy();

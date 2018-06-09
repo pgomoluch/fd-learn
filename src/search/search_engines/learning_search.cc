@@ -55,6 +55,7 @@ void LearningSearch::initialize() {
 
     ifstream weight_file("weights.txt");
     if(weight_file) {
+        weight_file >> avg_reward;
         for (double &w: weights)
             weight_file >> w;
         weight_file.close();
@@ -388,12 +389,15 @@ void LearningSearch::update_routine() {
         reward = previous_best_h - best_h;
         previous_best_h = best_h;
         
-        weights[current_action_id] =
-            (1 - learning_rate) * weights[current_action_id]
-            + learning_rate * reward;
+        // weights[current_action_id] =
+        //     (1 - learning_rate) * weights[current_action_id]
+        //     + learning_rate * reward;
+        gradient_update(current_action_id, reward);
+        
+        rewards.push_back(reward);
     }
     
-    current_action_id = epsilon_greedy_policy();
+    current_action_id = softmax_policy();
 
     // Dev logging
     steady_clock::time_point now = steady_clock::now();
@@ -413,6 +417,18 @@ void LearningSearch::update_routine() {
     steps_at_action_start = step_counter;
 }
 
+void LearningSearch::gradient_update(const int action_id, const int reward) {
+    double relative_reward = reward - avg_reward;
+    vector<double> probabilities = get_probabilities();
+    for (unsigned i = 0; i < weights.size(); ++i) {
+        if (i == (unsigned)action_id) {
+            weights[i] = weights[i] + learning_rate * relative_reward * (1 - probabilities[i]);
+        } else {
+            weights[i] = weights[i] - learning_rate * relative_reward * probabilities[i];
+        }
+    }
+}
+
 int LearningSearch::uniform_policy() {
     return int_dist(rng);
 }
@@ -423,6 +439,12 @@ int LearningSearch::proportional_policy() {
 }
 
 int LearningSearch::softmax_policy() {
+    vector<double> probabilities = get_probabilities();
+    discrete_distribution<> dist(probabilities.begin(), probabilities.end());
+    return dist(rng);
+}
+
+vector<double> LearningSearch::get_probabilities() {
     // TODO: Fine for weights up to 10, but consider a stable implementation. 
     vector<double> probabilities;
     probabilities.reserve(weights.size());
@@ -434,8 +456,7 @@ int LearningSearch::softmax_policy() {
     }
     for (double &p: probabilities)
         p /= sum;
-    discrete_distribution<> dist(probabilities.begin(), probabilities.end());
-    return dist(rng);
+    return probabilities;
 }
 
 int LearningSearch::epsilon_greedy_policy() {
@@ -448,7 +469,13 @@ int LearningSearch::epsilon_greedy_policy() {
 
 void LearningSearch::terminate_learning() {
     update_routine(); // reward the last routine
+    double avg_reward = 0.0;
+    for (int r: rewards)
+        avg_reward += r;
+    if (rewards.size() > 1)
+        avg_reward /= rewards.size();
     ofstream weights_file("weights.txt");
+    weights_file << avg_reward << endl;
     for (double w: weights)
         weights_file << w << " ";
     weights_file.close();
