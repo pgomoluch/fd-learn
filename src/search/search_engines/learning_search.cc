@@ -29,6 +29,7 @@ LearningSearch::LearningSearch(const Options &opts)
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       learning_log("rl-log.txt"),
+      action_count(actions.size(), 0),
       real_dist(0.0, 1.0),
       int_dist(0, actions.size()-1) {
     
@@ -55,7 +56,7 @@ void LearningSearch::initialize() {
 
     ifstream weight_file("weights.txt");
     if(weight_file) {
-        weight_file >> avg_reward;
+        //weight_file >> avg_reward;
         for (double &w: weights)
             weight_file >> w;
         weight_file.close();
@@ -386,13 +387,16 @@ void LearningSearch::update_routine() {
     
     int reward = 0;
     if (step_counter > 0) {
+        action_count[current_action_id] += 1;
+
         reward = previous_best_h - best_h;
         previous_best_h = best_h;
         
         // weights[current_action_id] =
         //     (1 - learning_rate) * weights[current_action_id]
         //     + learning_rate * reward;
-        gradient_update(current_action_id, reward);
+
+        // gradient_update(current_action_id, reward);
         
         rewards.push_back(reward);
     }
@@ -469,16 +473,19 @@ int LearningSearch::epsilon_greedy_policy() {
 
 void LearningSearch::terminate_learning() {
     update_routine(); // reward the last routine
-    double avg_reward = 0.0;
-    for (int r: rewards)
-        avg_reward += r;
-    if (rewards.size() > 1)
-        avg_reward /= rewards.size();
-    ofstream weights_file("weights.txt");
-    weights_file << avg_reward << endl;
-    for (double w: weights)
-        weights_file << w << " ";
-    weights_file.close();
+    // double avg_reward = 0.0;
+    // for (int r: rewards)
+    //     avg_reward += r;
+    // if (rewards.size() > 1)
+    //     avg_reward /= rewards.size();
+    ofstream episode_file("episode.txt");
+    // weights_file << avg_reward << endl;
+    // for (double w: weights)
+    //     weights_file << w << " ";
+    // weights_file << endl;
+    for (int c: action_count)
+        episode_file << c << " ";
+    episode_file.close();
 }
 
 EvaluationContext LearningSearch::process_state(const SearchNode &node, const GlobalState &state,

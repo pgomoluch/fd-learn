@@ -28,7 +28,7 @@ class LearningSearch : public SearchEngine {
     
     // Subroutine parameters
     const unsigned ACTION_DURATION = 100; // milliseconds
-    const unsigned STALL_SIZE = 1000;
+    const unsigned STALL_SIZE = 5;
     const unsigned ROLLOUT_LENGTH = 20;
 
     // Learning hyperparameters
@@ -103,6 +103,7 @@ class LearningSearch : public SearchEngine {
     std::vector<double> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
         INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
     int current_action_id = 0;
+    std::vector<int> action_count;
     std::uniform_real_distribution<> real_dist;
     std::uniform_int_distribution<> int_dist;
     std::chrono::steady_clock::time_point action_start;

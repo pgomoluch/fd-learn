@@ -5,12 +5,22 @@ import subprocess
 import sys
 import time
 
-#heuristic = 'h1=ff(transform=adapt_costs(one))'
-heuristic = 'h1=ff'
-search = 'learning(h1,learning_rate=%f)'
-learning_rate = 0.001
-transport_generator = '../../../IPC/own-transport/generator14L/city-generator.py'
+import numpy as np
+
+sys.path.append('problem-generators')
+from transport_generator import TransportGenerator
+
+
+heuristic = 'h1=ff(transform=adapt_costs(one))'
+search = 'learning(h1)'
+
+learning_rate = 0.1
 target_problem_time = 2.0
+
+N_ACTIONS = 6
+
+N_TRUCKS = 4
+N_PACKAGES = 9
 
 
 if len(sys.argv) == 4:
@@ -25,72 +35,77 @@ else:
     generate = True
 
 
-class TransportGenerator:
-    
-    def __init__(self):
-        self.trucks = 3
-        self.packages = 6
-        
-        self.nodes = 15
-        self.size = 1000
-        self.degree = 3
-        self.mindistance = 100
-    
-    def generate(self):
-        seed = time.time()
-        ipc_generator_command = ['python', transport_generator, str(self.nodes), str(self.size),
-            str(self.degree), str(self.mindistance), str(self.trucks), str(self.packages), str(seed)]
-        problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
-        problem_file = open('problem.pddl', 'w')
-        problem_file.write(problem)
-        problem_file.close()
-        # Remove the tex file created by the generator
-        os.remove('city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex'
-            % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed)))
-    
-    def easier(self):
-        if self.packages > 1:
-            self.packages -= 1
-    
-    def harder(self):
-        self.packages += 1
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
 
+def save_weights(weights):
+    weights_file = open('weights.txt', 'w')
+    weights_file.write(' '.join([str(x) for x in weights.tolist()]))
+    weights_file.close()
 
 log = open('rl_driver_log.txt', 'w')
-problem_log = open('rl_driver_problem_log.txt', 'w')
 
-generator = TransportGenerator()
+generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 
 start_time = time.time()
 
+params = np.array([0.0] * N_ACTIONS)
+save_weights(params)
+
 while time.time() - start_time < training_time:
+    
     if generate:
         generator.generate()
     problem_start = time.time()
     
+    reward = 0.0
+    problem_time = 0.0
     try:
-        subprocess.call(['../fast-downward.py', '--build', 'release64',  domain,  problem,
-            '--heuristic', heuristic, '--search',  search % learning_rate],
+        subprocess.call(['nohup', '../fast-downward.py', '--build', 'release64',  domain,  problem,
+            '--heuristic', heuristic, '--search',  search],
             timeout=10*target_problem_time)
+        problem_time = time.time() - problem_start
+        reward = target_problem_time - problem_time
+        if reward < 0:
+            reward = 0
     except subprocess.TimeoutExpired:
-        generator.easier()
+        #generator.easier()
         continue
     
     problem_time = time.time() - problem_start
-    problem_log.write('%f (%d)\n' % (problem_time, generator.packages))
-    problem_log.flush()
-    weights = open('weights.txt')
-    log.write(weights.read())
+    episode_file = open('episode.txt')
+    action_count = episode_file.readline()
+    episode_file.close()
+    action_count = np.array([int(x) for x in action_count.split()])
+    
+    # Policy gradient
+    pi = softmax(params)
+    params0 = np.copy(params)
+    for i in range(N_ACTIONS):
+        gradient = np.array([0.0] * N_ACTIONS)
+        for j in range(N_ACTIONS):
+            if i == j:
+                gradient[j] = pi[i] * (1 - pi[j])
+            else:
+                gradient[j] = pi[i] * (- pi[j])
+        params += learning_rate * reward * action_count[i] * gradient
+
+    print('Return:', reward, 'Action counts:', action_count)
+    print('Update:', params - params0)
+    print('Weights:', params)
+    save_weights(params)
+    
+    log.write(' '.join([str(x) for x in params.tolist()]))
     log.write('\n')
     log.flush()
-    weights.close()
+    
     if generate:
         if problem_time > target_problem_time:
-            generator.easier()
+            pass
+            #generator.easier()
         else:
-            generator.harder()
-    #if i % 100 == 0:
-    #    learning_rate /= 2
+            pass
+            #generator.harder()
 
 log.close()
-problem_log.close()
