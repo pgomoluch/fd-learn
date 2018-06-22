@@ -28,6 +28,7 @@ LearningSearch::LearningSearch(const Options &opts)
       learning_rate(opts.get<double>("learning_rate")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
+      trace("trace.txt"),
       learning_log("rl-log.txt"),
       action_count(actions.size(), 0),
       real_dist(0.0, 1.0),
@@ -388,6 +389,7 @@ void LearningSearch::update_routine() {
     int reward = 0;
     if (step_counter > 0) {
         action_count[current_action_id] += 1;
+        trace << current_action_id << endl;
 
         reward = previous_best_h - best_h;
         previous_best_h = best_h;

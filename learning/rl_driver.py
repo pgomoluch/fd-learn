@@ -1,11 +1,17 @@
 #!/usr/bin/python3
 
 import os
+import psutil
+import re
+import signal
 import subprocess
 import sys
 import time
 
 import numpy as np
+
+from pathlib import Path
+from threading import Timer, Thread
 
 sys.path.append('problem-generators')
 from transport_generator import TransportGenerator
@@ -14,6 +20,7 @@ from parking_generator import ParkingGenerator
 
 heuristic = 'h1=ff(transform=adapt_costs(one))'
 search = 'learning(h1)'
+reference_search = 'eager_greedy(h1)'
 
 learning_rate = 1.0
 target_problem_time = 2.0
@@ -25,6 +32,7 @@ N_PACKAGES = 9
 
 N_CURBS = 10
 N_CARS = 18
+
 
 if len(sys.argv) == 4:
     domain = sys.argv[1]
@@ -48,6 +56,31 @@ def save_weights(weights):
     weights_file.write(' '.join([str(x) for x in weights.tolist()]))
     weights_file.close()
 
+def get_cost(planner_output):
+    planner_output = planner_output.decode('utf-8')
+    m = re.search('Plan cost: [0-9]+', planner_output)
+    m2 = re.search('[0-9]+', m.group(0))
+    cost = int(m2.group(0))
+    return cost
+
+def get_output_with_timeout(command):
+    
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+    try:
+        output = proc.communicate(timeout=10*target_problem_time)[0]
+        return output
+    except subprocess.TimeoutExpired:
+        try:
+            parent = psutil.Process(proc.pid)
+        except psutil.NoSuchProcess:
+            pass
+        children = parent.children(recursive=True)
+        for c in children:
+            c.send_signal(signal.SIGINT)
+        proc.kill()
+        raise
+
+
 log = open('rl_driver_log.txt', 'w')
 
 generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
@@ -56,7 +89,15 @@ generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 start_time = time.time()
 
 params = np.array([0.0] * N_ACTIONS)
-save_weights(params)
+weight_path = Path('weights.txt')
+if weight_path.exists():
+    weight_file = open('weights.txt')
+    weights = [float(x) for x in weight_file.read().split()]
+    weight_file.close()
+    for i in range(len(weights)):
+        params[i] = weights[i]
+else:
+    save_weights(params)
 
 returns = []
 
@@ -64,31 +105,54 @@ while time.time() - start_time < training_time:
     
     if generate:
         generator.generate()
+    
+    reference_cost = 0
+    # Compute the reference solution
+    try:
+        reference_output = get_output_with_timeout(['../fast-downward.py',
+            '--build', 'release64',  domain,  problem,
+            '--heuristic', heuristic, '--search',  reference_search])
+        reference_cost = get_cost(reference_output)
+    except subprocess.TimeoutExpired:
+        print('Failed to find a reference solution.')
+    
+    
     problem_start = time.time()
     
     reward = 0.0
     problem_time = 0.0
     try:
-        subprocess.call(['nohup', '../fast-downward.py', '--build', 'release64',  domain,  problem,
-            '--heuristic', heuristic, '--search',  search],
-            timeout=10*target_problem_time)
+        planner_output = get_output_with_timeout(['../fast-downward.py',
+            '--build', 'release64',  domain,  problem,
+            '--heuristic', heuristic, '--search',  search])
         problem_time = time.time() - problem_start
-        reward = 10*target_problem_time - problem_time
-        if reward < 0.0:
-            reward = 0.0
+        print('Problem time: ', problem_time)
+        #reward = 10*target_problem_time - problem_time
+        cost = get_cost(planner_output)
+        if reference_cost > cost or reference_cost == 0:
+            reward = 1.0
+        else:
+            reward = reference_cost / cost
     except subprocess.TimeoutExpired:
+        print('Failed to find a solution.')
         #generator.easier()
-        continue
+        #continue
+        if reference_cost == 0:
+            reward = 1.0 # since no configuration solved the problem
+        else:
+            reward = 0.0 # == 0 / reference_cost
     
     returns.append(reward)
     if len(returns) > 100:
         returns = returns[-100:]
     
     problem_time = time.time() - problem_start
-    episode_file = open('episode.txt')
-    action_count = episode_file.readline()
-    episode_file.close()
-    action_count = np.array([int(x) for x in action_count.split()])
+    action_count = [0] * N_ACTIONS
+    trace_file = open('trace.txt')
+    lines = trace_file.readlines()
+    for l in lines:
+        action_count[int(l.split()[0])] += 1
+    action_count = np.array(action_count)
     action_count = action_count / action_count.sum()
     
     # Policy gradient
@@ -104,7 +168,8 @@ while time.time() - start_time < training_time:
                 gradient[j] = pi[i] * (- pi[j])
         params += learning_rate * centered_reward * action_count[i] * gradient
 
-    print('Return:', centered_reward, 'Action counts:', action_count)
+    print('Reward: ', reward, 'Centered: ', centered_reward)
+    print('Action counts:', action_count)
     print('Update:', params - params0)
     print('Weights:', params)
     save_weights(params)

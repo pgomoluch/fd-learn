@@ -53,6 +53,7 @@ class LearningSearch : public SearchEngine {
     double avg_reward = 0.0;
     std::vector<int> rewards;
     std::mt19937 rng;
+    std::ofstream trace;
     std::ofstream learning_log;
 
     //void start_f_value_statistics(EvaluationContext &eval_context);

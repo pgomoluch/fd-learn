@@ -19,7 +19,7 @@ class TransportGenerator:
     
     def generate(self, result_path = 'problem.pddl'):
         seed = time.time()
-        ipc_generator_command = ['nohup', 'python', ipc_generator, str(self.nodes), str(self.size),
+        ipc_generator_command = ['python', ipc_generator, str(self.nodes), str(self.size),
             str(self.degree), str(self.mindistance), str(self.trucks), str(self.packages), str(seed)]
         problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
         problem_file = open(result_path, 'w')
