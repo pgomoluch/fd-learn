@@ -129,8 +129,8 @@ while time.time() - start_time < training_time:
         print('Problem time: ', problem_time)
         #reward = 10*target_problem_time - problem_time
         cost = get_cost(planner_output)
-        if reference_cost > cost or reference_cost == 0:
-            reward = 1.0
+        if reference_cost == 0:
+            reward = 2.0 # fixed reward for solving a problem without reference solution
         else:
             reward = reference_cost / cost
     except subprocess.TimeoutExpired:
@@ -138,7 +138,7 @@ while time.time() - start_time < training_time:
         #generator.easier()
         #continue
         if reference_cost == 0:
-            reward = 1.0 # since no configuration solved the problem
+            continue
         else:
             reward = 0.0 # == 0 / reference_cost
     
