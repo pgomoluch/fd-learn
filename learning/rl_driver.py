@@ -33,6 +33,9 @@ N_PACKAGES = 9
 N_CURBS = 10
 N_CARS = 18
 
+generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
+#generator = ParkingGenerator(N_CURBS, N_CARS)
+
 
 if len(sys.argv) == 4:
     domain = sys.argv[1]
@@ -80,11 +83,40 @@ def get_output_with_timeout(command):
         proc.kill()
         raise
 
+def get_problem():
+    if generate:
+        generator.generate()
+    return 'problem.pddl'
+
+
+def compute_reward(problem_time, plan_cost):
+
+    # Compute the reference solution
+    if generate or not hasattr(compute_reward, 'ref_cost'):
+        compute_reward.ref_cost = -1
+        try:
+            reference_output = get_output_with_timeout(['../fast-downward.py',
+                '--build', 'release64',  domain,  problem_path,
+                '--heuristic', heuristic, '--search',  reference_search])
+            compute_reward.ref_cost = get_cost(reference_output)
+        except subprocess.TimeoutExpired:
+            print('Failed to find a reference solution.')
+            if not generate:
+                sys.exit('Terminating.')
+    
+    # If no reference solution
+    if compute_reward.ref_cost < 0:
+        if plan_cost < 0:
+            return 0.0
+        return 2.0 # fixed reward for solving a problem without reference solution
+    # Otherwise
+    if plan_cost < 0:
+        return 0.0
+    return compute_reward.ref_cost / plan_cost
+
+
 
 log = open('rl_driver_log.txt', 'w')
-
-generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
-#generator = ParkingGenerator(N_CURBS, N_CARS)
 
 start_time = time.time()
 
@@ -103,50 +135,27 @@ returns = []
 
 while time.time() - start_time < training_time:
     
-    if generate:
-        generator.generate()
+    problem_path = get_problem()    
     
-    reference_cost = 0
-    # Compute the reference solution
-    try:
-        reference_output = get_output_with_timeout(['../fast-downward.py',
-            '--build', 'release64',  domain,  problem,
-            '--heuristic', heuristic, '--search',  reference_search])
-        reference_cost = get_cost(reference_output)
-    except subprocess.TimeoutExpired:
-        print('Failed to find a reference solution.')
-    
-    
-    problem_start = time.time()
-    
-    reward = 0.0
     problem_time = 0.0
+    plan_cost = -1
     try:
+        problem_start = time.time()
         planner_output = get_output_with_timeout(['../fast-downward.py',
-            '--build', 'release64',  domain,  problem,
+            '--build', 'release64',  domain,  problem_path,
             '--heuristic', heuristic, '--search',  search])
         problem_time = time.time() - problem_start
         print('Problem time: ', problem_time)
         #reward = 10*target_problem_time - problem_time
-        cost = get_cost(planner_output)
-        if reference_cost == 0:
-            reward = 2.0 # fixed reward for solving a problem without reference solution
-        else:
-            reward = reference_cost / cost
+        plan_cost = get_cost(planner_output)
     except subprocess.TimeoutExpired:
         print('Failed to find a solution.')
-        #generator.easier()
-        #continue
-        if reference_cost == 0:
-            continue
-        else:
-            reward = 0.0 # == 0 / reference_cost
     
+    reward = compute_reward(problem_time, plan_cost)
     returns.append(reward)
     if len(returns) > 100:
         returns = returns[-100:]
     
-    problem_time = time.time() - problem_start
     action_count = [0] * N_ACTIONS
     trace_file = open('trace.txt')
     lines = trace_file.readlines()
@@ -179,13 +188,6 @@ while time.time() - start_time < training_time:
     log.flush()
     
     np.append(returns, reward)
-    
-    if generate:
-        if problem_time > target_problem_time:
-            pass
-            #generator.easier()
-        else:
-            pass
-            #generator.harder()
+
 
 log.close()
