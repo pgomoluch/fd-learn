@@ -46,6 +46,7 @@ class LearningSearch : public SearchEngine {
     unsigned step_counter = 0;
     unsigned steps_at_action_start = 0;
     unsigned expansions_without_progress = 0;
+    int initial_h = -1;
     int best_h = -1;
     int previous_best_h = -1;
     int all_time_best_h = -1;
@@ -59,7 +60,7 @@ class LearningSearch : public SearchEngine {
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
     void update_routine();
-    void gradient_update(const int action_id, const int reward);
+    //void gradient_update(const int action_id, const int reward);
     std::vector<double> get_probabilities();
 
     int uniform_policy();
@@ -101,8 +102,10 @@ class LearningSearch : public SearchEngine {
         &LearningSearch::preferred_rollout_step,
         &LearningSearch::local_step,
         &LearningSearch::depth_first_step};
-    std::vector<double> weights = {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT,
-        INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT};
+    std::vector<std::vector<double>> weights = {
+        {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT},
+        {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT}
+    };
     int current_action_id = 0;
     std::vector<int> action_count;
     std::uniform_real_distribution<> real_dist;

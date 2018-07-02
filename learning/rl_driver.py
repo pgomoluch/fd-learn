@@ -23,8 +23,9 @@ search = 'learning(h1)'
 reference_search = 'eager_greedy(h1)'
 
 learning_rate = 1.0
-target_problem_time = 2.0
+target_problem_time = 0.3
 
+STATE_SPACE = (2,)
 N_ACTIONS = 6
 
 N_TRUCKS = 4
@@ -56,7 +57,8 @@ def softmax(x):
 
 def save_weights(weights):
     weights_file = open('weights.txt', 'w')
-    weights_file.write(' '.join([str(x) for x in weights.tolist()]))
+    for row in weights:
+        weights_file.write(' '.join([str(x) for x in row.tolist()]))
     weights_file.close()
 
 def get_cost(planner_output):
@@ -87,6 +89,12 @@ def get_problem():
     if generate:
         generator.generate()
     return 'problem.pddl'
+
+def n_states():
+    r = 1
+    for s in STATE_SPACE:
+        r *= s
+    return r
 
 
 def compute_reward(problem_time, plan_cost):
@@ -120,14 +128,14 @@ log = open('rl_driver_log.txt', 'w')
 
 start_time = time.time()
 
-params = np.array([0.0] * N_ACTIONS)
+params = np.zeros((n_states(), N_ACTIONS))
 weight_path = Path('weights.txt')
 if weight_path.exists():
     weight_file = open('weights.txt')
-    weights = [float(x) for x in weight_file.read().split()]
+    lines = weight_file.readlines()
+    for l, p in zip(lines,params):
+        p = [float(x) for x in l.split()]
     weight_file.close()
-    for i in range(len(weights)):
-        params[i] = weights[i]
 else:
     save_weights(params)
 
@@ -156,34 +164,39 @@ while time.time() - start_time < training_time:
     if len(returns) > 100:
         returns = returns[-100:]
     
-    action_count = [0] * N_ACTIONS
+    action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
     trace_file = open('trace.txt')
     lines = trace_file.readlines()
     for l in lines:
-        action_count[int(l.split()[0])] += 1
-    action_count = np.array(action_count)
+        numbers = [ int(x) for x in l.split()]
+        action_count[tuple(numbers)] += 1
     action_count = action_count / action_count.sum()
     
-    # Policy gradient
-    pi = softmax(params)
-    params0 = np.copy(params)
+    flat_action_count = action_count.reshape(-1, N_ACTIONS)
     centered_reward = reward - np.mean(np.array(returns))
-    for i in range(N_ACTIONS):
-        gradient = np.array([0.0] * N_ACTIONS)
-        for j in range(N_ACTIONS):
-            if i == j:
-                gradient[j] = pi[i] * (1 - pi[j])
-            else:
-                gradient[j] = pi[i] * (- pi[j])
-        params += learning_rate * centered_reward * action_count[i] * gradient
-
     print('Reward: ', reward, 'Centered: ', centered_reward)
+    
+    # Policy gradient
+    for state_params, actions in zip(params, flat_action_count):
+        pi = softmax(state_params)
+        state_params0 = np.copy(state_params)
+        for i in range(N_ACTIONS):
+            gradient = np.array([0.0] * N_ACTIONS)
+            for j in range(N_ACTIONS):
+                if i == j:
+                    gradient[j] = pi[i] * (1 - pi[j])
+                else:
+                    gradient[j] = pi[i] * (- pi[j])
+            state_params += learning_rate * centered_reward * actions[i] * gradient
+        print('Update:', state_params - state_params0)
+
     print('Action counts:', action_count)
-    print('Update:', params - params0)
     print('Weights:', params)
     save_weights(params)
     
-    log.write(' '.join([str(x) for x in params.tolist()]))
+    for row in params:
+        log.write(' '.join([str(x) for x in row.tolist()]))
+        log.write(' ')
     log.write('\n')
     log.flush()
     

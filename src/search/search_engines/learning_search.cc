@@ -58,8 +58,9 @@ void LearningSearch::initialize() {
     ifstream weight_file("weights.txt");
     if(weight_file) {
         //weight_file >> avg_reward;
-        for (double &w: weights)
-            weight_file >> w;
+        for (vector<double> &row: weights)
+            for (double &w: row)
+                weight_file >> w;
         weight_file.close();
     }
 
@@ -82,7 +83,7 @@ void LearningSearch::initialize() {
 
         // At the moment we only support a single heuristic
         int h = eval_context.get_heuristic_value(heuristics[0]);
-        all_time_best_h = best_h = previous_best_h = h;
+        initial_h = all_time_best_h = best_h = previous_best_h = h;
         open_list->insert(eval_context, initial_state.get_id());
     }
 }
@@ -389,14 +390,11 @@ void LearningSearch::update_routine() {
     int reward = 0;
     if (step_counter > 0) {
         action_count[current_action_id] += 1;
-        trace << current_action_id << endl;
+        trace << (previous_best_h > initial_h / 2) << " "
+            << current_action_id << endl;
 
         reward = previous_best_h - best_h;
         previous_best_h = best_h;
-        
-        // weights[current_action_id] =
-        //     (1 - learning_rate) * weights[current_action_id]
-        //     + learning_rate * reward;
 
         // gradient_update(current_action_id, reward);
         
@@ -414,7 +412,7 @@ void LearningSearch::update_routine() {
         cout << ", Steps: " << step_counter - steps_at_action_start << endl;
     }
     cout << "Weights: " << setprecision(3);
-    for(double d: weights)
+    for(double d: weights[best_h > initial_h/2])
         cout << d << " ";
     cout << ", Choice: " << current_action_id << ", ";
     cout << "ENP: " << expansions_without_progress << ", ";
@@ -423,24 +421,25 @@ void LearningSearch::update_routine() {
     steps_at_action_start = step_counter;
 }
 
-void LearningSearch::gradient_update(const int action_id, const int reward) {
-    double relative_reward = reward - avg_reward;
-    vector<double> probabilities = get_probabilities();
-    for (unsigned i = 0; i < weights.size(); ++i) {
-        if (i == (unsigned)action_id) {
-            weights[i] = weights[i] + learning_rate * relative_reward * (1 - probabilities[i]);
-        } else {
-            weights[i] = weights[i] - learning_rate * relative_reward * probabilities[i];
-        }
-    }
-}
+// void LearningSearch::gradient_update(const int action_id, const int reward) {
+//     double relative_reward = reward - avg_reward;
+//     vector<double> probabilities = get_probabilities();
+//     for (unsigned i = 0; i < weights.size(); ++i) {
+//         if (i == (unsigned)action_id) {
+//             weights[i] = weights[i] + learning_rate * relative_reward * (1 - probabilities[i]);
+//         } else {
+//             weights[i] = weights[i] - learning_rate * relative_reward * probabilities[i];
+//         }
+//     }
+// }
 
 int LearningSearch::uniform_policy() {
     return int_dist(rng);
 }
 
 int LearningSearch::proportional_policy() {
-    discrete_distribution<> dist(weights.begin(), weights.end());
+    unsigned state = (best_h > initial_h / 2);
+    discrete_distribution<> dist(weights[state].begin(), weights[state].end());
     return dist(rng);
 }
 
@@ -451,11 +450,12 @@ int LearningSearch::softmax_policy() {
 }
 
 vector<double> LearningSearch::get_probabilities() {
+    unsigned state = (best_h > initial_h / 2);
     // TODO: Fine for weights up to 10, but consider a stable implementation. 
     vector<double> probabilities;
-    probabilities.reserve(weights.size());
+    probabilities.reserve(weights[state].size());
     double sum = 0.0;
-    for (double w: weights) {
+    for (double w: weights[state]) {
         double p = exp(w);
         probabilities.push_back(p);
         sum += p;
@@ -470,7 +470,9 @@ int LearningSearch::epsilon_greedy_policy() {
         // choose a random action
         return uniform_policy();
     // choose the action with the highest weight
-    return distance(weights.begin(), max_element(weights.begin(), weights.end()));
+    unsigned state = (best_h > initial_h / 2);
+    return distance(weights[state].begin(),
+        max_element(weights[state].begin(), weights[state].end()));
 }
 
 void LearningSearch::terminate_learning() {
