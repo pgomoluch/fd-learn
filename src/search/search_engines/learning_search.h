@@ -31,6 +31,9 @@ class LearningSearch : public SearchEngine {
     const unsigned STALL_SIZE = 5;
     const unsigned ROLLOUT_LENGTH = 20;
 
+    const std::vector<unsigned> STATE_SPACE = {2,2};
+    const unsigned REF_TIME = 1000; // milliseconds
+
     // Learning hyperparameters
     const double EPSILON = 0.5;
     const double INITIAL_WEIGHT = 0.5;
@@ -51,8 +54,11 @@ class LearningSearch : public SearchEngine {
     int previous_best_h = -1;
     int all_time_best_h = -1;
     const double learning_rate;
+    const unsigned n_states;
+    std::chrono::steady_clock::time_point search_start; 
     double avg_reward = 0.0;
     std::vector<int> rewards;
+    std::vector<unsigned> state;
     std::mt19937 rng;
     std::ofstream trace;
     std::ofstream learning_log;
@@ -61,12 +67,16 @@ class LearningSearch : public SearchEngine {
     //void update_f_value_statistics(const SearchNode &node);
     void update_routine();
     //void gradient_update(const int action_id, const int reward);
-    std::vector<double> get_probabilities();
+    std::vector<unsigned> get_state_features();
+    unsigned get_state_id();
+    unsigned compute_n_states();
+    std::vector<double> get_probabilities(const std::vector<double> &weights);
 
     int uniform_policy();
     int proportional_policy();
     int softmax_policy();
     int epsilon_greedy_policy();
+    int initial_policy();
     
     void terminate_learning();
     void merge_local_list();
@@ -102,14 +112,12 @@ class LearningSearch : public SearchEngine {
         &LearningSearch::preferred_rollout_step,
         &LearningSearch::local_step,
         &LearningSearch::depth_first_step};
-    std::vector<std::vector<double>> weights = {
-        {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT},
-        {INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT, INITIAL_WEIGHT}
-    };
+    std::vector<std::vector<double>> weights;
     int current_action_id = 0;
     std::vector<int> action_count;
     std::uniform_real_distribution<> real_dist;
     std::uniform_int_distribution<> int_dist;
+    std::vector<std::discrete_distribution<>> initial_distribution;
     std::chrono::steady_clock::time_point action_start;
 
 protected:

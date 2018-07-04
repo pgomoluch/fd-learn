@@ -26,6 +26,7 @@ LearningSearch::LearningSearch(const Options &opts)
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       learning_rate(opts.get<double>("learning_rate")),
+      n_states(compute_n_states()),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       trace("trace.txt"),
@@ -37,6 +38,13 @@ LearningSearch::LearningSearch(const Options &opts)
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
             opts.get_list<ScalarEvaluator *>("evals");
+    
+    weights.reserve(n_states);
+    auto initial_weights = vector<double>(actions.size(), INITIAL_WEIGHT);
+    for (unsigned i = 0; i < n_states; ++i)
+        weights.push_back(initial_weights);
+
+    search_start = steady_clock::now();
     
     open_list = global_open_list.get();
 }
@@ -62,6 +70,11 @@ void LearningSearch::initialize() {
             for (double &w: row)
                 weight_file >> w;
         weight_file.close();
+    }
+    for (const vector<double> &row: weights) {
+        auto p = get_probabilities(row);
+        initial_distribution.push_back(
+            discrete_distribution<>(p.begin(), p.end()));
     }
 
 
@@ -390,8 +403,9 @@ void LearningSearch::update_routine() {
     int reward = 0;
     if (step_counter > 0) {
         action_count[current_action_id] += 1;
-        trace << (previous_best_h > initial_h / 2) << " "
-            << current_action_id << endl;
+        for (auto f: state)
+            trace << f << " ";
+        trace << current_action_id << endl;
 
         reward = previous_best_h - best_h;
         previous_best_h = best_h;
@@ -400,8 +414,9 @@ void LearningSearch::update_routine() {
         
         rewards.push_back(reward);
     }
-    
-    current_action_id = softmax_policy();
+
+    state = get_state_features();
+    current_action_id = initial_policy();
 
     // Dev logging
     steady_clock::time_point now = steady_clock::now();
@@ -412,13 +427,32 @@ void LearningSearch::update_routine() {
         cout << ", Steps: " << step_counter - steps_at_action_start << endl;
     }
     cout << "Weights: " << setprecision(3);
-    for(double d: weights[best_h > initial_h/2])
+    for(double d: weights[get_state_id()])
         cout << d << " ";
     cout << ", Choice: " << current_action_id << ", ";
     cout << "ENP: " << expansions_without_progress << ", ";
 
     action_start = now;
     steps_at_action_start = step_counter;
+}
+
+vector<unsigned> LearningSearch::get_state_features() {
+    vector<unsigned> result;
+    result.push_back(best_h > initial_h /2);
+    result.push_back(
+        duration_cast<milliseconds>(steady_clock::now()-search_start).count() > REF_TIME);
+    return result;
+}
+
+unsigned LearningSearch::get_state_id() {
+    auto features = get_state_features();
+    unsigned result = 0;
+    unsigned weight = 1;
+    for (unsigned i = features.size()-1; i > 0; --i) {
+        result += weight * features[i];
+        weight *= STATE_SPACE[i];
+    }
+    return result;
 }
 
 // void LearningSearch::gradient_update(const int action_id, const int reward) {
@@ -438,24 +472,29 @@ int LearningSearch::uniform_policy() {
 }
 
 int LearningSearch::proportional_policy() {
-    unsigned state = (best_h > initial_h / 2);
+    unsigned state = get_state_id();
     discrete_distribution<> dist(weights[state].begin(), weights[state].end());
     return dist(rng);
 }
 
 int LearningSearch::softmax_policy() {
-    vector<double> probabilities = get_probabilities();
+    unsigned state = get_state_id();
+    vector<double> probabilities = get_probabilities(weights[state]);
     discrete_distribution<> dist(probabilities.begin(), probabilities.end());
     return dist(rng);
 }
 
-vector<double> LearningSearch::get_probabilities() {
-    unsigned state = (best_h > initial_h / 2);
+int LearningSearch::initial_policy() {
+    unsigned state = get_state_id();
+    return initial_distribution[state](rng);
+}
+
+vector<double> LearningSearch::get_probabilities(const vector<double> &weights) {
     // TODO: Fine for weights up to 10, but consider a stable implementation. 
     vector<double> probabilities;
-    probabilities.reserve(weights[state].size());
+    probabilities.reserve(weights.size());
     double sum = 0.0;
-    for (double w: weights[state]) {
+    for (double w: weights) {
         double p = exp(w);
         probabilities.push_back(p);
         sum += p;
@@ -470,7 +509,7 @@ int LearningSearch::epsilon_greedy_policy() {
         // choose a random action
         return uniform_policy();
     // choose the action with the highest weight
-    unsigned state = (best_h > initial_h / 2);
+    unsigned state = get_state_id();
     return distance(weights[state].begin(),
         max_element(weights[state].begin(), weights[state].end()));
 }
@@ -550,6 +589,13 @@ EvaluationContext LearningSearch::process_state(const SearchNode &node, const Gl
         return eval_context;
     }
     return eval_context;
+}
+
+unsigned LearningSearch::compute_n_states() {
+    unsigned result = 1;
+    for (unsigned u: STATE_SPACE)
+        result *= u;
+    return result;
 }
 
 // void LearningSearch::start_f_value_statistics(EvaluationContext &eval_context) {

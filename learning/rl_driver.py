@@ -25,7 +25,7 @@ reference_search = 'eager_greedy(h1)'
 learning_rate = 1.0
 target_problem_time = 0.3
 
-STATE_SPACE = (2,)
+STATE_SPACE = (2,2)
 N_ACTIONS = 6
 
 N_TRUCKS = 4
@@ -59,6 +59,7 @@ def save_weights(weights):
     weights_file = open('weights.txt', 'w')
     for row in weights:
         weights_file.write(' '.join([str(x) for x in row.tolist()]))
+        weights_file.write(' ')
     weights_file.close()
 
 def get_cost(planner_output):
@@ -96,6 +97,8 @@ def n_states():
         r *= s
     return r
 
+class NoRewardException(Exception):
+    pass
 
 def compute_reward(problem_time, plan_cost):
 
@@ -114,9 +117,9 @@ def compute_reward(problem_time, plan_cost):
     
     # If no reference solution
     if compute_reward.ref_cost < 0:
-        if plan_cost < 0:
-            return 0.0
-        return 2.0 # fixed reward for solving a problem without reference solution
+        if plan_cost >= 0:
+            return 2.0 # fixed reward for solving a problem without reference solution
+        raise NoRewardException()
     # Otherwise
     if plan_cost < 0:
         return 0.0
@@ -125,6 +128,7 @@ def compute_reward(problem_time, plan_cost):
 
 
 log = open('rl_driver_log.txt', 'w')
+debug_log = open('rl_debug_log.txt', 'w')
 
 start_time = time.time()
 
@@ -159,7 +163,14 @@ while time.time() - start_time < training_time:
     except subprocess.TimeoutExpired:
         print('Failed to find a solution.')
     
-    reward = compute_reward(problem_time, plan_cost)
+    if plan_cost == 0:
+        continue
+    
+    try:
+        reward = compute_reward(problem_time, plan_cost)
+    except NoRewardException:
+        continue
+    
     returns.append(reward)
     if len(returns) > 100:
         returns = returns[-100:]
@@ -170,7 +181,14 @@ while time.time() - start_time < training_time:
     for l in lines:
         numbers = [ int(x) for x in l.split()]
         action_count[tuple(numbers)] += 1
-    action_count = action_count / action_count.sum()
+    debug_log.write(str(action_count.sum()))
+    debug_log.write(' ')
+    action_sum = action_count.sum()
+    if action_sum < 0.5:
+        print('The trace is empty.')
+        debug_log.write('The trace is empty.\n')
+        continue
+    action_count = action_count / action_sum
     
     flat_action_count = action_count.reshape(-1, N_ACTIONS)
     centered_reward = reward - np.mean(np.array(returns))
@@ -191,8 +209,13 @@ while time.time() - start_time < training_time:
         print('Update:', state_params - state_params0)
 
     print('Action counts:', action_count)
-    print('Weights:', params)
+    print('Weights:')
+    print(params)
     save_weights(params)
+    
+    debug_log.write(str(np.isnan(params).any()))
+    debug_log.write('\n')
+    debug_log.flush()
     
     for row in params:
         log.write(' '.join([str(x) for x in row.tolist()]))
