@@ -11,7 +11,7 @@ class ParkingGenerator:
         self.cars = cars
         
     def generate(self, result_path = 'problem.pddl'):
-        ipc_generator_command = ['nohup', 'perl', ipc_generator,
+        ipc_generator_command = ['perl', ipc_generator,
             'p', str(self.curbs), str(self.cars)]
         problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
         problem_file = open(result_path, 'w')

@@ -31,8 +31,8 @@ N_ACTIONS = 6
 N_TRUCKS = 4
 N_PACKAGES = 9
 
-N_CURBS = 10
-N_CARS = 18
+N_CURBS = 9
+N_CARS = 16
 
 generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 #generator = ParkingGenerator(N_CURBS, N_CARS)
@@ -78,12 +78,15 @@ def get_output_with_timeout(command):
     except subprocess.TimeoutExpired:
         try:
             parent = psutil.Process(proc.pid)
+            children = parent.children(recursive=True)
+            for c in children:
+                try:
+                    c.send_signal(signal.SIGINT)
+                except psutil.NoSuchProcess:
+                    pass
+            proc.kill()
         except psutil.NoSuchProcess:
             pass
-        children = parent.children(recursive=True)
-        for c in children:
-            c.send_signal(signal.SIGINT)
-        proc.kill()
         raise
 
 def get_problem():
@@ -136,10 +139,9 @@ params = np.zeros((n_states(), N_ACTIONS))
 weight_path = Path('weights.txt')
 if weight_path.exists():
     weight_file = open('weights.txt')
-    lines = weight_file.readlines()
-    for l, p in zip(lines,params):
-        p = [float(x) for x in l.split()]
+    weights = [float(x) for x in weight_file.read().split()]
     weight_file.close()
+    params = np.array(weights).reshape(n_states(), N_ACTIONS)
 else:
     save_weights(params)
 
