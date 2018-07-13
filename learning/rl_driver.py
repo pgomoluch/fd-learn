@@ -2,6 +2,7 @@
 
 import os
 import psutil
+import random
 import re
 import signal
 import subprocess
@@ -33,6 +34,8 @@ N_PACKAGES = 9
 
 N_CURBS = 9
 N_CARS = 16
+
+N_SAMPLES = 10
 
 generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 #generator = ParkingGenerator(N_CURBS, N_CARS)
@@ -128,10 +131,31 @@ def compute_reward(problem_time, plan_cost):
         return 0.0
     return compute_reward.ref_cost / plan_cost
 
+def gradient_update(params, history, avg_reward):
+    
+    update = np.zeros(params.shape)
+    for s in range(N_SAMPLES):
+        (action_count, reward) = random.choice(history) #history[-1]
+        centered_reward = reward - avg_reward
+        for state_params, actions, update_row in zip(params, action_count, update):
+            pi = softmax(state_params)
+            state_params0 = np.copy(state_params)
+            for i in range(N_ACTIONS):
+                gradient = np.array([0.0] * N_ACTIONS)
+                for j in range(N_ACTIONS):
+                    if i == j:
+                        gradient[j] = pi[i] * (1 - pi[j])
+                    else:
+                        gradient[j] = pi[i] * (- pi[j])
+                update_row += learning_rate * centered_reward * actions[i] * gradient
+    update /= N_SAMPLES
+    return update
+
 
 
 log = open('rl_driver_log.txt', 'w')
 debug_log = open('rl_debug_log.txt', 'w')
+reward_log = open('rl_reward_log.txt', 'w')
 
 start_time = time.time()
 
@@ -145,7 +169,9 @@ if weight_path.exists():
 else:
     save_weights(params)
 
-returns = []
+n_iter = 0
+avg_reward = 0.0
+history = []
 
 while time.time() - start_time < training_time:
     
@@ -173,9 +199,14 @@ while time.time() - start_time < training_time:
     except NoRewardException:
         continue
     
-    returns.append(reward)
-    if len(returns) > 100:
-        returns = returns[-100:]
+    reward_log.write(str(reward))
+    reward_log.write('\n')
+    reward_log.flush()
+    
+    if n_iter == 0:
+        avg_reward = reward
+    else:
+        avg_reward += (1 / n_iter) * (reward - avg_reward)
     
     action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
     trace_file = open('trace.txt')
@@ -193,22 +224,14 @@ while time.time() - start_time < training_time:
     action_count = action_count / action_sum
     
     flat_action_count = action_count.reshape(-1, N_ACTIONS)
-    centered_reward = reward - np.mean(np.array(returns))
-    print('Reward: ', reward, 'Centered: ', centered_reward)
+    c_reward = reward - avg_reward
+    print('Reward: ', reward, 'Centered: ', c_reward)
+    history.append((flat_action_count, reward))
     
-    # Policy gradient
-    for state_params, actions in zip(params, flat_action_count):
-        pi = softmax(state_params)
-        state_params0 = np.copy(state_params)
-        for i in range(N_ACTIONS):
-            gradient = np.array([0.0] * N_ACTIONS)
-            for j in range(N_ACTIONS):
-                if i == j:
-                    gradient[j] = pi[i] * (1 - pi[j])
-                else:
-                    gradient[j] = pi[i] * (- pi[j])
-            state_params += learning_rate * centered_reward * actions[i] * gradient
-        print('Update:', state_params - state_params0)
+    update = gradient_update(params, history, avg_reward)
+    print('Update:\n')
+    print(update)
+    params += update
 
     print('Action counts:', action_count)
     print('Weights:')
@@ -225,7 +248,9 @@ while time.time() - start_time < training_time:
     log.write('\n')
     log.flush()
     
-    np.append(returns, reward)
+    n_iter += 1
 
 
 log.close()
+debug_log.close()
+reward_log.close()
