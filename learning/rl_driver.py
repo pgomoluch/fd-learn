@@ -21,7 +21,9 @@ from parking_generator import ParkingGenerator
 
 heuristic = 'h1=ff(transform=adapt_costs(one))'
 search = 'learning(h1)'
-reference_search = 'eager_greedy(h1)'
+ref_search1 = 'eager_greedy(h1)'
+ref_search2 = 'learning(h1,weights=uniform.txt)' # it's ok if uniform.txt doesn't exist
+ref_search_list = [ref_search1, ref_search2]
 
 learning_rate = 1.0
 target_problem_time = 0.3
@@ -108,18 +110,24 @@ class NoRewardException(Exception):
 
 def compute_reward(problem_time, plan_cost):
 
-    # Compute the reference solution
+    # Compute the reference solutions
     if generate or not hasattr(compute_reward, 'ref_cost'):
         compute_reward.ref_cost = -1
-        try:
-            reference_output = get_output_with_timeout(['../fast-downward.py',
-                '--build', 'release64',  domain,  problem_path,
-                '--heuristic', heuristic, '--search',  reference_search])
-            compute_reward.ref_cost = get_cost(reference_output)
-        except subprocess.TimeoutExpired:
-            print('Failed to find a reference solution.')
-            if not generate:
-                sys.exit('Terminating.')
+        ref_costs = []
+        for ref_search in ref_search_list:
+            try:
+                reference_output = get_output_with_timeout(['../fast-downward.py',
+                    '--build', 'release64',  domain,  problem_path,
+                    '--heuristic', heuristic, '--search',  ref_search])
+                #compute_reward.ref_cost = get_cost(reference_output)
+                ref_costs.append(get_cost(reference_output))
+            except subprocess.TimeoutExpired:
+                print('Failed to find a reference solution.')
+                if not generate:
+                    sys.exit('Terminating.')
+        print('Reference costs:', ref_costs)
+        if len(ref_costs) > 0:
+            compute_reward.ref_cost = min(ref_costs)
     
     # If no reference solution
     if compute_reward.ref_cost < 0:
@@ -194,6 +202,7 @@ while time.time() - start_time < training_time:
     if plan_cost == 0:
         continue
     
+    print ('Plan cost:', plan_cost)
     try:
         reward = compute_reward(problem_time, plan_cost)
     except NoRewardException:

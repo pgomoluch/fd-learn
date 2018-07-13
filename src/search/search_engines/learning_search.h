@@ -36,7 +36,7 @@ class LearningSearch : public SearchEngine {
 
     // Learning hyperparameters
     const double EPSILON = 0.5;
-    const double INITIAL_WEIGHT = 0.5;
+    const double INITIAL_WEIGHT = 0.0;
 
     RandomAccessStateOpenList *open_list;
     std::shared_ptr<RAOpenListFactory> open_list_factory;
@@ -55,6 +55,7 @@ class LearningSearch : public SearchEngine {
     int all_time_best_h = -1;
     const double learning_rate;
     const unsigned n_states;
+    std::string weights_path;
     std::chrono::steady_clock::time_point search_start; 
     double avg_reward = 0.0;
     std::vector<int> rewards;

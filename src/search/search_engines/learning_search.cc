@@ -27,6 +27,7 @@ LearningSearch::LearningSearch(const Options &opts)
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       learning_rate(opts.get<double>("learning_rate")),
       n_states(compute_n_states()),
+      weights_path(opts.get<string>("weights")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       trace("trace.txt"),
@@ -63,7 +64,7 @@ void LearningSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    ifstream weight_file("weights.txt");
+    ifstream weight_file(weights_path);
     if(weight_file) {
         //weight_file >> avg_reward;
         for (vector<double> &row: weights)
@@ -684,6 +685,7 @@ static SearchEngine *_parse(OptionParser &parser) {
         "boost",
         "boost value for preferred operator open lists", "0");
     parser.add_option<double>("learning_rate", "the learning rate for RL", "0.001");
+    parser.add_option<string>("weights", "path to the weights file", "weights.txt");
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
