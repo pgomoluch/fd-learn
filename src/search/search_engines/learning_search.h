@@ -32,7 +32,6 @@ class LearningSearch : public SearchEngine {
     const unsigned ROLLOUT_LENGTH = 20;
 
     const std::vector<unsigned> STATE_SPACE = {2,2};
-    const unsigned REF_TIME = 1000; // milliseconds
 
     // Learning hyperparameters
     const double EPSILON = 0.5;
@@ -54,6 +53,7 @@ class LearningSearch : public SearchEngine {
     int previous_best_h = -1;
     int all_time_best_h = -1;
     const double learning_rate;
+    const unsigned ref_time; // milliseconds
     const unsigned n_states;
     std::string weights_path;
     std::chrono::steady_clock::time_point search_start; 

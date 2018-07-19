@@ -20,13 +20,15 @@ from parking_generator import ParkingGenerator
 
 
 heuristic = 'h1=ff(transform=adapt_costs(one))'
-search = 'learning(h1)'
+search = 'learning(h1,t=%d)'
 ref_search1 = 'eager_greedy(h1)'
 ref_search2 = 'learning(h1,weights=uniform.txt)' # it's ok if uniform.txt doesn't exist
 ref_search_list = [ref_search1, ref_search2]
 
 learning_rate = 1.0
 target_problem_time = 0.3
+preprocessing_time = 800 # Transport(4,9)
+#preprocessing_time = 2200 # Parking(9,16)
 
 STATE_SPACE = (2,2)
 N_ACTIONS = 6
@@ -75,7 +77,7 @@ def get_cost(planner_output):
     return cost
 
 def get_output_with_timeout(command):
-    
+
     proc = subprocess.Popen(command, stdout=subprocess.PIPE)
     try:
         output = proc.communicate(timeout=10*target_problem_time)[0]
@@ -117,7 +119,7 @@ def compute_reward(problem_time, plan_cost):
         for ref_search in ref_search_list:
             try:
                 reference_output = get_output_with_timeout(['../fast-downward.py',
-                    '--build', 'release64',  domain,  problem_path,
+                    '--build', 'release64',  domain,  problem_path, # should be passed as arg
                     '--heuristic', heuristic, '--search',  ref_search])
                 #compute_reward.ref_cost = get_cost(reference_output)
                 ref_costs.append(get_cost(reference_output))
@@ -161,11 +163,10 @@ def gradient_update(params, history, avg_reward):
 
 
 
+
 log = open('rl_driver_log.txt', 'w')
 debug_log = open('rl_debug_log.txt', 'w')
 reward_log = open('rl_reward_log.txt', 'w')
-
-start_time = time.time()
 
 params = np.zeros((n_states(), N_ACTIONS))
 weight_path = Path('weights.txt')
@@ -181,6 +182,11 @@ n_iter = 0
 avg_reward = 0.0
 history = []
 
+search_time = int(1000 * 10 * target_problem_time - preprocessing_time)
+print('Search time:', search_time)
+
+start_time = time.time()
+
 while time.time() - start_time < training_time:
     
     problem_path = get_problem()    
@@ -191,7 +197,7 @@ while time.time() - start_time < training_time:
         problem_start = time.time()
         planner_output = get_output_with_timeout(['../fast-downward.py',
             '--build', 'release64',  domain,  problem_path,
-            '--heuristic', heuristic, '--search',  search])
+            '--heuristic', heuristic, '--search',  search % search_time])
         problem_time = time.time() - problem_start
         print('Problem time: ', problem_time)
         #reward = 10*target_problem_time - problem_time

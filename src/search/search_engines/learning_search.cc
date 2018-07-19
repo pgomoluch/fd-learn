@@ -26,6 +26,7 @@ LearningSearch::LearningSearch(const Options &opts)
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       learning_rate(opts.get<double>("learning_rate")),
+      ref_time(opts.get<int>("t") / 2),
       n_states(compute_n_states()),
       weights_path(opts.get<string>("weights")),
       rng(system_clock::now().time_since_epoch().count()),
@@ -77,7 +78,6 @@ void LearningSearch::initialize() {
         initial_distribution.push_back(
             discrete_distribution<>(p.begin(), p.end()));
     }
-
 
     const GlobalState &initial_state = state_registry.get_initial_state();
     for (Heuristic *h: heuristics) {
@@ -441,7 +441,7 @@ vector<unsigned> LearningSearch::get_state_features() {
     vector<unsigned> result;
     result.push_back(best_h > initial_h /2);
     result.push_back(
-        duration_cast<milliseconds>(steady_clock::now()-search_start).count() > REF_TIME);
+        duration_cast<milliseconds>(steady_clock::now()-search_start).count() > ref_time);
     return result;
 }
 
@@ -686,6 +686,7 @@ static SearchEngine *_parse(OptionParser &parser) {
         "boost value for preferred operator open lists", "0");
     parser.add_option<double>("learning_rate", "the learning rate for RL", "0.001");
     parser.add_option<string>("weights", "path to the weights file", "weights.txt");
+    parser.add_option<int>("t", "time allocated for the search [ms]", "1000");
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);
