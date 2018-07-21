@@ -208,8 +208,8 @@ while time.time() - start_time < training_time:
     if n_iter > 0:
         avg_reward += (1 / n_iter) * (avg_problem_reward - avg_reward)
     
+    avg_problem_reward = 0.0
     for i in range(RUNS_PER_PROBLEM):
-        update = np.zeros(params.shape)
         problem_time = 0.0
         plan_cost = -1
         try:
