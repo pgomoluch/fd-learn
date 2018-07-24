@@ -17,6 +17,8 @@ from threading import Timer, Thread
 sys.path.append('problem-generators')
 from transport_generator import TransportGenerator
 from parking_generator import ParkingGenerator
+from elevators_generator import ElevatorsGenerator
+from nomystery_generator import NomysteryGenerator
 
 
 heuristic = 'h1=ff(transform=adapt_costs(one))'
@@ -32,7 +34,7 @@ ref_search_list = [ref_search1, ref_search2, ref_search3,
 
 learning_rate = 1.0
 target_problem_time = 0.3
-preprocessing_time = 800 # Transport(4,9)
+preprocessing_time = 800 # Transport(4,9), Elevators(20,12,6,2,2), No-mystery(6,7,1.3)
 #preprocessing_time = 2200 # Parking(9,16)
 
 STATE_SPACE = (2,2)
@@ -49,7 +51,8 @@ RUNS_PER_PROBLEM = 20
 
 generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 #generator = ParkingGenerator(N_CURBS, N_CARS)
-
+#generator = ElevatorsGenerator(20,12,6,2,2)
+#generator = NomysteryGenerator(6,7,1.3)
 
 if len(sys.argv) == 4:
     domain = sys.argv[1]
@@ -61,6 +64,8 @@ else:
     problem = 'problem.pddl'
     domain = '../../../IPC/own-transport/domain.pddl'
     #domain = '../../../IPC/own-parking/domain.pddl'
+    #domain = '../../../IPC/own-elevators/domain.pddl'
+    #domain = '../../IPC/own-no-mystery/domain.pddl'
     generate = True
 
 
