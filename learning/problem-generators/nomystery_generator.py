@@ -4,7 +4,7 @@ import subprocess
 
 ipc_generator = '../../../IPC/own-no-mystery/generator/nomystery -l %d -p %d -c %d -s %d'
 
-class NoMysteryGenerator:
+class NomysteryGenerator:
 
     def __init__(self, locations, packages, constraint):
         self.locations = locations

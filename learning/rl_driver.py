@@ -34,8 +34,10 @@ ref_search_list = [ref_search1, ref_search2, ref_search3,
 
 learning_rate = 1.0
 target_problem_time = 0.3
-preprocessing_time = 800 # Transport(4,9), Elevators(20,12,6,2,2), No-mystery(6,7,1.3)
+preprocessing_time = 800 # Transport(4,9)
 #preprocessing_time = 2200 # Parking(9,16)
+#preprocessing_time = 1000 # Elevators(20,12,6,2,2)
+#preprocessing_time = 300 # No-mystery(6,7,1.3)
 
 STATE_SPACE = (2,2)
 N_ACTIONS = 6

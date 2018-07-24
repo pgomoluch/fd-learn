@@ -28,7 +28,7 @@ generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
 domain = '../../../IPC/own-transport/domain.pddl'
 #domain = '../../../IPC/own-parking/domain.pddl'
 #domain = '../../../IPC/own-elevators/domain.pddl'
-#domain = '../../IPC/own-no-mystery/domain.pddl'
+#domain = '../../../IPC/own-no-mystery/domain.pddl'
 
 
 iterations = 10
