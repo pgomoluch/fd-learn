@@ -29,3 +29,4 @@ class ElevatorsGenerator:
         for i in range(1, n+1):
             path = base_path + str(i) + '.pddl'
             self.generate(path)
+            time.sleep(1.1)
