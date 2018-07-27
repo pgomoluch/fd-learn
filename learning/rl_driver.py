@@ -200,6 +200,7 @@ n_iter = 0
 avg_reward = 0.0
 avg_problem_reward = 0.0
 history = []
+total_action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
 
 search_time = int(1000 * 10 * target_problem_time - preprocessing_time)
 print('Search time:', search_time)
@@ -253,6 +254,7 @@ while time.time() - start_time < training_time:
             action_count[tuple(numbers)] += 1
         debug_log.write(str(action_count.sum()))
         debug_log.write(' ')
+        total_action_count += action_count
         action_sum = action_count.sum()
         if action_sum < 0.5:
             print('The trace is empty.')
@@ -295,6 +297,7 @@ while time.time() - start_time < training_time:
     avg_problem_reward /= RUNS_PER_PROBLEM
     n_iter += 1
 
+debug_log.write(str(total_action_count))
 
 log.close()
 debug_log.close()
