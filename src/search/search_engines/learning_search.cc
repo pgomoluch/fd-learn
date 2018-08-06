@@ -449,7 +449,7 @@ unsigned LearningSearch::get_state_id() {
     auto features = get_state_features();
     unsigned result = 0;
     unsigned weight = 1;
-    for (unsigned i = features.size()-1; i > 0; --i) {
+    for (int i = features.size()-1; i >= 0; --i) {
         result += weight * features[i];
         weight *= STATE_SPACE[i];
     }
