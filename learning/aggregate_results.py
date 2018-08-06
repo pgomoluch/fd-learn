@@ -8,7 +8,7 @@ import sys
 
 import matplotlib.pyplot as plt
 
-TIMEOUT = 60.0
+TIMEOUT = 3.0
 
 class Result:
     def __init__(self, solved, costs, times):
@@ -98,7 +98,10 @@ for domain in all_domains:
         cost_sum = 0
         for i in id_set:
             cost_sum += costs[i]
-        all_results[conf][domain].avg_cost = cost_sum / len(id_set)
+        if len(id_set) > 0:
+            all_results[conf][domain].avg_cost = cost_sum / len(id_set)
+        else:
+            all_results[conf][domain].avg_cost = -1
         partial_scores = [ x/y if x != float('inf') else 0.0
             for (x,y) in zip(lowest_costs, costs) ]
         all_results[conf][domain].ipc_score = sum(partial_scores)
