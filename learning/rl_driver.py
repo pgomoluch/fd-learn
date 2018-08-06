@@ -33,8 +33,8 @@ ref_search_list = [ref_search1, ref_search2, ref_search3,
     ref_search4, ref_search5, ref_search6]
 
 learning_rate = 1.0
-target_problem_time = 0.3
-preprocessing_time = 800 # Transport(4,9)
+target_problem_time = 0.5
+preprocessing_time = 800 # Transport(4,9), (4,11)
 #preprocessing_time = 2200 # Parking(9,16)
 #preprocessing_time = 1000 # Elevators(20,12,6,2,2)
 #preprocessing_time = 300 # No-mystery(6,7,1.3)
@@ -43,7 +43,7 @@ STATE_SPACE = (2,2)
 N_ACTIONS = 6
 
 N_TRUCKS = 4
-N_PACKAGES = 9
+N_PACKAGES = 11
 
 N_CURBS = 9
 N_CARS = 16
@@ -260,12 +260,16 @@ while time.time() - start_time < training_time:
             print('The trace is empty.')
             debug_log.write('The trace is empty.\n')
             continue
-        action_count = action_count / action_sum
         
-        flat_action_count = action_count.reshape(-1, N_ACTIONS)
+        flat_action_count = action_count.copy().reshape(-1, N_ACTIONS)
+        for row in flat_action_count:
+            row_sum = row.sum()
+            if sum(row) > 0.0:
+                row /= row_sum
         c_reward = reward - avg_reward
         print('Reward: ', reward, 'Centered: ', c_reward)
-        print('Action counts:', action_count)
+        print('Action counts:')
+        print(action_count)
         #history.append((flat_action_count, reward))
         
         #update = gradient_update(params, history, avg_reward)
@@ -298,6 +302,8 @@ while time.time() - start_time < training_time:
     n_iter += 1
 
 debug_log.write(str(total_action_count))
+debug_log.write('\n')
+debug_log.write(str(np.sum(total_action_count,-1)))
 
 log.close()
 debug_log.close()
