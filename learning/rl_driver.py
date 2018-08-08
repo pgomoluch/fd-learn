@@ -157,7 +157,7 @@ def compute_ipc_reward(plan_cost, reference_costs):
 def gradient_update(params, action_count, reward):
     
     update = np.zeros(params.shape)
-    for state_params, actions, update_row in zip(params, action_count, update):
+    for state_params, actions, update_row, state_reward in zip(params, action_count, update, reward):
         pi = softmax(state_params)
         state_params0 = np.copy(state_params)
         for i in range(N_ACTIONS):
@@ -167,7 +167,7 @@ def gradient_update(params, action_count, reward):
                     gradient[j] = pi[i] * (1 - pi[j])
                 else:
                     gradient[j] = pi[i] * (- pi[j])
-            update_row += learning_rate * reward * actions[i] * gradient
+            update_row += learning_rate * state_reward * actions[i] * gradient
     return update
 
 def replay_update(params, history, avg_reward):
@@ -197,8 +197,7 @@ else:
     save_weights(params)
 
 n_iter = 0
-avg_reward = 0.0
-avg_problem_reward = 0.0
+avg_rewards = [(0,0.0)] * n_states() 
 history = []
 total_action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
 
@@ -213,10 +212,6 @@ while time.time() - start_time < training_time:
     reference_costs = compute_reference_costs(problem_path)
     update = np.zeros(params.shape)
     
-    if n_iter > 0:
-        avg_reward += (1 / n_iter) * (avg_problem_reward - avg_reward)
-    
-    avg_problem_reward = 0.0
     for i in range(RUNS_PER_PROBLEM):
         problem_time = 0.0
         plan_cost = -1
@@ -244,7 +239,6 @@ while time.time() - start_time < training_time:
         reward_log.write(str(reward))
         reward_log.write('\n')
         reward_log.flush()
-        avg_problem_reward += reward
         
         action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
         trace_file = open('trace.txt')
@@ -262,11 +256,18 @@ while time.time() - start_time < training_time:
             continue
         
         flat_action_count = action_count.copy().reshape(-1, N_ACTIONS)
-        for row in flat_action_count:
+        for i, row in enumerate(flat_action_count):
             row_sum = row.sum()
-            if sum(row) > 0.0:
+            if row_sum > 0.0:
+                # normalize the row
                 row /= row_sum
-        c_reward = reward - avg_reward
+                # update the baseline for the state
+                (old_iter, old_reward) = avg_rewards[i]
+                new_iter = old_iter + 1
+                new_reward = old_reward * (old_iter / new_iter) + reward * (1 / new_iter)
+                avg_rewards[i] = (new_iter, new_reward)
+        # c_reward is an array now
+        c_reward = reward - np.array([x for (_, x) in avg_rewards])
         print('Reward: ', reward, 'Centered: ', c_reward)
         print('Action counts:')
         print(action_count)
@@ -281,8 +282,7 @@ while time.time() - start_time < training_time:
     
     print('Complete update:')
     print(update)
-    if n_iter > 0: # skip the first iteration (for the lack of baseline)
-        params += update
+    params += update
 
     print('Weights:')
     print(params)
@@ -298,7 +298,6 @@ while time.time() - start_time < training_time:
     log.write('\n')
     log.flush()
     
-    avg_problem_reward /= RUNS_PER_PROBLEM
     n_iter += 1
 
 debug_log.write(str(total_action_count))
