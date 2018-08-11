@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import glob
 import os
 import psutil
 import random
@@ -13,6 +14,8 @@ import numpy as np
 
 from pathlib import Path
 from threading import Timer, Thread
+
+from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
 
 sys.path.append('problem-generators')
 from transport_generator import TransportGenerator
@@ -42,23 +45,17 @@ preprocessing_time = 800 # Transport(4,9), (4,11)
 STATE_SPACE = (2,2)
 N_ACTIONS = 6
 
-N_TRUCKS = 4
-N_PACKAGES = 11
-
-N_CURBS = 9
-N_CARS = 16
-
 N_SAMPLES = 10
-RUNS_PER_PROBLEM = 20
+RUNS_PER_PROBLEM = 5
 
-generator = TransportGenerator(N_TRUCKS, N_PACKAGES)
-#generator = ParkingGenerator(N_CURBS, N_CARS)
+generator = TransportGenerator(4, 11)
+#generator = ParkingGenerator(10, 18)
 #generator = ElevatorsGenerator(20,12,6,2,2)
 #generator = NomysteryGenerator(6,7,1.3)
 
 if len(sys.argv) == 4:
     domain = sys.argv[1]
-    problem = sys.argv[2]
+    problem_dir = sys.argv[2]
     training_time = int(sys.argv[3])
     generate = False
 else:
@@ -82,64 +79,41 @@ def save_weights(weights):
         weights_file.write(' ')
     weights_file.close()
 
-def get_cost(planner_output):
-    planner_output = planner_output.decode('utf-8')
-    m = re.search('Plan cost: [0-9]+', planner_output)
-    m2 = re.search('[0-9]+', m.group(0))
-    cost = int(m2.group(0))
-    return cost
-
-def get_output_with_timeout(command):
-
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE)
-    try:
-        output = proc.communicate(timeout=10*target_problem_time)[0]
-        return output
-    except subprocess.TimeoutExpired:
-        try:
-            parent = psutil.Process(proc.pid)
-            children = parent.children(recursive=True)
-            for c in children:
-                try:
-                    c.send_signal(signal.SIGINT)
-                except psutil.NoSuchProcess:
-                    pass
-            proc.kill()
-        except psutil.NoSuchProcess:
-            pass
-        raise
-
-def get_problem():
-    if generate:
-        generator.generate()
-    return 'problem.pddl'
-
 def n_states():
     r = 1
     for s in STATE_SPACE:
         r *= s
     return r
 
-def compute_reference_costs(problem_path):
-    costs = []
-    for ref_search in ref_search_list:
-        try:
-            reference_output = get_output_with_timeout(['../fast-downward.py',
-                '--build', 'release64',  domain,  problem_path,
-                '--heuristic', heuristic, '--search',  ref_search])
-            cost = get_cost(reference_output)
-            print('Reference cost:', cost)
-            costs.append(cost)
-        except subprocess.TimeoutExpired:
-            print('Failed to find a reference solution.')
-    return costs
+def get_problem():
+    if generate:
+        path = 'problem.pddl'
+        generator.generate(path)
+        costs = compute_reference_costs(domain, path, ref_search_list, heuristic,
+            10 * target_problem_time)
+        if len(costs) > 0:
+            cost = min(costs)
+        else:
+            cost = -1
+        return (path, cost)
+    else:
+        if get_problem.problem_set is None:
+            get_problem.problem_set = glob.glob(problem_dir + '/p*.pddl')
+            get_problem.costs = np.load(problem_dir + '/costs.npy').item()
+        problem = random.choice(get_problem.problem_set)
+        print(problem)
+        return (problem, get_problem.costs[problem.split('/')[-1]])
+
+
+get_problem.problem_set = None
+get_problem.costs = None
 
 class NoRewardException(Exception):
     pass
 
-def compute_ipc_reward(plan_cost, reference_costs):
+def compute_ipc_reward(plan_cost, reference_cost):
     # If no reference solution
-    if len(reference_costs) == 0:
+    if reference_cost == -1:
         if plan_cost > 0:
             return 2.0
         raise NoRewardException()
@@ -149,7 +123,7 @@ def compute_ipc_reward(plan_cost, reference_costs):
     elif plan_cost == 0:
         raise NoRewardException()
     else:
-        return min(reference_costs) / plan_cost
+        return reference_cost / plan_cost
 
 
 
@@ -208,8 +182,7 @@ start_time = time.time()
 
 while time.time() - start_time < training_time:
     
-    problem_path = get_problem()    
-    reference_costs = compute_reference_costs(problem_path)
+    problem_path, reference_cost = get_problem()
     update = np.zeros(params.shape)
     
     for i in range(RUNS_PER_PROBLEM):
@@ -219,7 +192,8 @@ while time.time() - start_time < training_time:
             problem_start = time.time()
             planner_output = get_output_with_timeout(['../fast-downward.py',
                 '--build', 'release64',  domain,  problem_path,
-                '--heuristic', heuristic, '--search',  search % search_time])
+                '--heuristic', heuristic, '--search',  search % search_time],
+                10 * target_problem_time)
             problem_time = time.time() - problem_start
             print('Problem time: ', problem_time)
             #reward = 10*target_problem_time - problem_time
@@ -232,7 +206,7 @@ while time.time() - start_time < training_time:
         
         print ('Plan cost:', plan_cost)
         try:
-            reward = compute_ipc_reward(plan_cost, reference_costs)
+            reward = compute_ipc_reward(plan_cost, reference_cost)
         except NoRewardException:
             continue
         
