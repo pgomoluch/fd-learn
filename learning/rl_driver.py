@@ -138,10 +138,10 @@ def gradient_update(params, action_count, reward):
             gradient = np.array([0.0] * N_ACTIONS)
             for j in range(N_ACTIONS):
                 if i == j:
-                    gradient[j] = pi[i] * (1 - pi[j])
+                    gradient[j] = pi[j] * (1 - pi[i])
                 else:
-                    gradient[j] = pi[i] * (- pi[j])
-            update_row += learning_rate * state_reward * actions[i] * gradient
+                    gradient[j] = pi[j] * (- pi[i])
+            update_row += learning_rate * state_reward * actions[i] * gradient / pi[i]
     return update
 
 def replay_update(params, history, avg_reward):
