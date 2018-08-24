@@ -35,15 +35,12 @@ ref_search6 = 'learning(h1,weights=weights6of6.txt)'
 ref_search_list = [ref_search1, ref_search2, ref_search3,
     ref_search4, ref_search5, ref_search6]
 
-learning_rate = 1.0
+learning_rate = 0.02
 max_problem_time = 5.0
-preprocessing_time = 800 # Transport(4,9), (4,11)
-#preprocessing_time = 2200 # Parking(9,16)
-#preprocessing_time = 1000 # Elevators(20,12,6,2,2)
-#preprocessing_time = 300 # No-mystery(6,7,1.3)
+preprocessing_time = 800
 
 STATE_SPACE = (2,2)
-N_ACTIONS = 6
+N_ACTIONS = 5
 
 N_SAMPLES = 10
 RUNS_PER_PROBLEM = 5
@@ -249,7 +246,7 @@ while time.time() - start_time < training_time:
             row_sum = row.sum()
             if row_sum > 0.0:
                 # normalize the row
-                row /= row_sum
+                # row /= row_sum
                 # update the baseline for the state
                 (old_iter, old_reward) = avg_rewards[i]
                 new_iter = old_iter + 1
