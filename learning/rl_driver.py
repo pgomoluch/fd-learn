@@ -36,7 +36,7 @@ ref_search_list = [ref_search1, ref_search2, ref_search3,
     ref_search4, ref_search5, ref_search6]
 
 learning_rate = 1.0
-target_problem_time = 0.5
+max_problem_time = 5.0
 preprocessing_time = 800 # Transport(4,9), (4,11)
 #preprocessing_time = 2200 # Parking(9,16)
 #preprocessing_time = 1000 # Elevators(20,12,6,2,2)
@@ -90,7 +90,7 @@ def get_problem():
         path = 'problem.pddl'
         generator.generate(path)
         costs = compute_reference_costs(domain, path, ref_search_list, heuristic,
-            10 * target_problem_time)
+            max_problem_time)
         if len(costs) > 0:
             cost = min(costs)
         else:
@@ -125,6 +125,18 @@ def compute_ipc_reward(plan_cost, reference_cost):
     else:
         return reference_cost / plan_cost
 
+def compute_sqr_ipc_reward(plan_cost, reference_cost):
+    ipc_reward = compute_ipc_reward(plan_cost, reference_cost)
+    squared = ipc_reward * ipc_reward
+    if squared >= 2.0:
+        return 2.0
+    return squared
+
+def compute_time_reward(problem_time):
+    if problem_time < 0:
+        return 0.0
+    else:
+        return max_problem_time - problem_time
 
 
 
@@ -175,7 +187,7 @@ avg_rewards = [(0,0.0)] * n_states()
 history = []
 total_action_count = np.zeros(STATE_SPACE+(N_ACTIONS,))
 
-search_time = int(1000 * 10 * target_problem_time - preprocessing_time)
+search_time = int(1000 * max_problem_time - preprocessing_time)
 print('Search time:', search_time)
 
 start_time = time.time()
@@ -193,20 +205,23 @@ while time.time() - start_time < training_time:
             planner_output = get_output_with_timeout(['../fast-downward.py',
                 '--build', 'release64',  domain,  problem_path,
                 '--heuristic', heuristic, '--search',  search % search_time],
-                10 * target_problem_time)
+                max_problem_time)
             problem_time = time.time() - problem_start
             print('Problem time: ', problem_time)
-            #reward = 10*target_problem_time - problem_time
             plan_cost = get_cost(planner_output)
         except subprocess.TimeoutExpired:
             print('Failed to find a solution.')
+            problem_time = -1
         
         if plan_cost == 0:
             continue
         
         print ('Plan cost:', plan_cost)
+        print ('Reference cost:', reference_cost)
         try:
             reward = compute_ipc_reward(plan_cost, reference_cost)
+            #reward = compute_sqr_ipc_reward(plan_cost, reference_cost)
+            #reward = compute_time_reward(problem_time)
         except NoRewardException:
             continue
         
