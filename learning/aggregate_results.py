@@ -8,7 +8,7 @@ import sys
 
 import matplotlib.pyplot as plt
 
-TIMEOUT = 3.0
+TIMEOUT = 5.0
 
 class Result:
     def __init__(self, solved, costs, times):
@@ -17,6 +17,8 @@ class Result:
         self.times = times
         self.avg_cost = 0.0
         self.ipc_score = 0.0
+        self.ipc2_score = 0.0
+        self.time_score = sum([(TIMEOUT - x) / TIMEOUT for x in times])
 
 def extract_results(filename):
     f = open(filename)
@@ -60,7 +62,10 @@ def min_lists(l1, l2):
 
 result_dir = sys.argv[1]
 aggregate_file = sys.argv[2]
-plot_dir = sys.argv[3]
+plotting = False
+if len(sys.argv) > 3:
+    plotting = True
+    plot_dir = sys.argv[3]
 
 # Fill a dictrionary of results indexed by configuration and domain
 
@@ -105,32 +110,35 @@ for domain in all_domains:
         partial_scores = [ x/y if x != float('inf') else 0.0
             for (x,y) in zip(lowest_costs, costs) ]
         all_results[conf][domain].ipc_score = sum(partial_scores)
+        all_results[conf][domain].ipc2_score = sum([x*x for x in partial_scores])
+    if plotting:
     # Create the progress plots
-    for conf in all_results:
-        result = all_results[conf][domain]
-        times = sorted(result.times)
-        if conf in all_times:
-            all_times[conf] += times
-        else:
-            all_times[conf] = times
+        for conf in all_results:
+            result = all_results[conf][domain]
+            times = sorted(result.times)
+            if conf in all_times:
+                all_times[conf] += times
+            else:
+                all_times[conf] = times
+            x = [0.0] + times + [TIMEOUT]
+            y = list(range(len(times))) + 2 * [len(times)]
+            plt.step(x, y, where='post', label=conf)
+        plt.legend(loc='upper left', bbox_to_anchor=(1,1))
+        plt.savefig(os.path.join(plot_dir, domain), bbox_inches='tight')
+        plt.clf()
+
+if plotting:
+    # Create the combined progress plot
+    for conf in all_times:
+        times = sorted(all_times[conf])
         x = [0.0] + times + [TIMEOUT]
         y = list(range(len(times))) + 2 * [len(times)]
         plt.step(x, y, where='post', label=conf)
-    plt.legend(loc='upper left', bbox_to_anchor=(1,1))
-    plt.savefig(os.path.join(plot_dir, domain), bbox_inches='tight')
+    plt.ylabel('problems solved')
+    plt.xlabel('time [s]')
+    plt.legend(loc='lower right', bbox_to_anchor=(1,0)) # 'upper left', (1,1)
+    plt.savefig(os.path.join(plot_dir, 'combined'), bbox_inches='tight', format="svg")
     plt.clf()
-
-# Create the combined progress plot
-for conf in all_times:
-    times = sorted(all_times[conf])
-    x = [0.0] + times + [TIMEOUT]
-    y = list(range(len(times))) + 2 * [len(times)]
-    plt.step(x, y, where='post', label=conf)
-plt.ylabel('problems solved')
-plt.xlabel('time [s]')
-plt.legend(loc='lower right', bbox_to_anchor=(1,0)) # 'upper left', (1,1)
-plt.savefig(os.path.join(plot_dir, 'combined'), bbox_inches='tight', format="svg")
-plt.clf()
 
 # Generate a CSV file
 
@@ -146,8 +154,10 @@ of.write(',\n')
 g_solved = lambda x: x.solved
 g_cost = lambda x: round(x.avg_cost, 2)
 g_score = lambda x: round(x.ipc_score, 2)
+g_score2 = lambda x: round(x.ipc2_score, 2)
+g_time_score = lambda x: round(x.time_score, 2)
 
-for getter in [g_solved, g_cost, g_score]:
+for getter in [g_solved, g_cost, g_score, g_score2, g_time_score]:
     # Coverage
     for domain in domains:
         of.write(domain)
