@@ -285,6 +285,14 @@ fast_downward_plugin(
 )
 
 fast_downward_plugin(
+    NAME PARAMETRIZED_SEARCH
+    HELP "Parametrized search algorithm"
+    SOURCES
+        search_engines/parametrized_search.cc
+    DEPENDS SEARCH_COMMON
+)
+
+fast_downward_plugin(
     NAME LP_SOLVER
     HELP "Interface to an LP solver"
     SOURCES
