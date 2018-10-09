@@ -198,6 +198,7 @@ SearchStatus ParametrizedSearch::random_walk(StateID &state_id, algorithms::Orde
 }
 
 void ParametrizedSearch::restart_local_list() {
+    open_list = global_open_list.get();
     StateID id = get_best_state();
     GlobalState state = state_registry.lookup_state(id);
     SearchNode node = search_space.get_node(state);
