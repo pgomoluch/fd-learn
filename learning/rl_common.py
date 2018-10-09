@@ -44,3 +44,20 @@ def compute_reference_costs(domain_path, problem_path, ref_confs, heuristic, tim
         except subprocess.TimeoutExpired:
             print('Failed to find a reference solution.')
     return costs
+
+class NoRewardException(Exception):
+    pass
+
+def compute_ipc_reward(plan_cost, reference_cost):
+    # If no reference solution
+    if reference_cost == -1:
+        if plan_cost > 0:
+            return 2.0
+        raise NoRewardException()
+    # Otherwise
+    if plan_cost < 0:
+        return 0.0
+    elif plan_cost == 0:
+        raise NoRewardException()
+    else:
+        return reference_cost / plan_cost

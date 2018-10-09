@@ -15,7 +15,7 @@ import numpy as np
 from pathlib import Path
 from threading import Timer, Thread
 
-from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
+from rl_common import *
 
 sys.path.append('problem-generators')
 from transport_generator import TransportGenerator
@@ -40,7 +40,7 @@ max_problem_time = 5.0
 preprocessing_time = 800
 
 STATE_SPACE = (2,2)
-N_ACTIONS = 5
+N_ACTIONS = 6
 
 N_SAMPLES = 10
 RUNS_PER_PROBLEM = 5
@@ -105,22 +105,6 @@ def get_problem():
 get_problem.problem_set = None
 get_problem.costs = None
 
-class NoRewardException(Exception):
-    pass
-
-def compute_ipc_reward(plan_cost, reference_cost):
-    # If no reference solution
-    if reference_cost == -1:
-        if plan_cost > 0:
-            return 2.0
-        raise NoRewardException()
-    # Otherwise
-    if plan_cost < 0:
-        return 0.0
-    elif plan_cost == 0:
-        raise NoRewardException()
-    else:
-        return reference_cost / plan_cost
 
 def compute_sqr_ipc_reward(plan_cost, reference_cost):
     ipc_reward = compute_ipc_reward(plan_cost, reference_cost)
