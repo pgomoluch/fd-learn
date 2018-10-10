@@ -26,7 +26,8 @@ MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
 
-RUNS_PER_ITERATION = 5
+N_TEST_PROBLEMS = 10
+RUNS_PER_PROBLEM = 5
 MAX_PROBLEM_TIME = 5.0
 
 
@@ -76,30 +77,31 @@ def compute_ipc_reward(plan_cost, reference_cost):
     else:
         return reference_cost / plan_cost
 
-def score_params(params, problem_path, reference_cost):
+def score_params(params, paths_and_costs):
     save_params(params, PARAMS_PATH)
     total_score = 0.0
-    for i in range(RUNS_PER_ITERATION):
-        plan_cost = -1
-        try:
-            problem_start = time.time()
-            planner_output = get_output_with_timeout(['../fast-downward.py',
-                '--build', 'release64',  DOMAIN,  problem_path,
-                '--heuristic', HEURISTIC, '--search',  SEARCH],
-                MAX_PROBLEM_TIME)
-            problem_time = time.time() - problem_start
-            print('Problem time: ', problem_time)
-            plan_cost = get_cost(planner_output)
-        except subprocess.TimeoutExpired:
-            print('Failed to find a solution.')
-            problem_time = -1
-        
-        try:
-            reward = compute_ipc_reward(plan_cost, reference_cost)
-        except:
-            reward = 0.0
+    for problem_path, reference_cost in paths_and_costs:
+        for i in range(RUNS_PER_PROBLEM):
+            plan_cost = -1
+            try:
+                problem_start = time.time()
+                planner_output = get_output_with_timeout(['../fast-downward.py',
+                    '--build', 'release64',  DOMAIN,  problem_path,
+                    '--heuristic', HEURISTIC, '--search',  SEARCH],
+                    MAX_PROBLEM_TIME)
+                problem_time = time.time() - problem_start
+                print('Problem time: ', problem_time)
+                plan_cost = get_cost(planner_output)
+            except subprocess.TimeoutExpired:
+                print('Failed to find a solution.')
+                problem_time = -1
             
-        total_score += reward
+            try:
+                reward = compute_ipc_reward(plan_cost, reference_cost)
+            except:
+                reward = 0.0
+                
+            total_score += reward
     
     return total_score
 
@@ -114,10 +116,12 @@ params_log = open('params_log.txt', 'w')
 
 while time.time() - start_time < TRAINING_TIME:
     
-    problem_path, reference_cost = get_problem()
+    paths_and_costs = []
+    for i in range(N_TEST_PROBLEMS):
+        paths_and_costs.append(get_problem())
     new_params = generate_next(params)
-    score = score_params(params, problem_path, reference_cost)
-    new_score = score_params(new_params, problem_path, reference_cost)
+    score = score_params(params, paths_and_costs)
+    new_score = score_params(new_params, paths_and_costs)
     
     print(params, score)
     print(new_params, new_score)
