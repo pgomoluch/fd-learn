@@ -206,6 +206,9 @@ void ParametrizedSearch::restart_local_list() {
     local_open_list = open_list_factory->create_state_open_list();
     EvaluationContext eval_context(state, node.get_g(), true, &statistics);
     local_open_list->insert(eval_context, id);
+    // Expansion from the local queue isn't guaranteed, so keep (re-add) the state
+    // in the global queue too.
+    global_open_list->insert(eval_context, id);
 }
 
 void ParametrizedSearch::merge_local_list() {
