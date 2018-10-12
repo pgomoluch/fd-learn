@@ -66,14 +66,14 @@ void ParametrizedSearch::initialize() {
     if(params_file) {
         params_file >> EPSILON;
         params_file >> ROLLOUT_LENGTH;
-        params_file >> P_LOCAL;
+        params_file >> GLOBAL_EXP_LIMIT;
         params_file >> LOCAL_EXP_LIMIT;
 
         params_file.close();
     }
     cout << "\nepsilon = " << EPSILON;
     cout << "\nrollout_length = " << ROLLOUT_LENGTH;
-    cout << "\np_local = " << P_LOCAL;
+    cout << "\nglobal_exp_limit = " << GLOBAL_EXP_LIMIT;
     cout << "\nlocal_exp_limit = " << LOCAL_EXP_LIMIT;
     cout << endl;
 
@@ -107,32 +107,40 @@ void ParametrizedSearch::print_statistics() const {
 }
 
 SearchStatus ParametrizedSearch::step() {
-    
-    if (exp_since_local_restart >= LOCAL_EXP_LIMIT) {
-        merge_local_list();
-        restart_local_list();
-        exp_since_local_restart = 0;
-    }
 
-    if (real_dist(rng) < P_LOCAL && !local_open_list->empty())
-        open_list = local_open_list.get(); // expand local
-    else
-        open_list = global_open_list.get(); // expand global
+    if (open_list == local_open_list.get() && exp_since_switch >= LOCAL_EXP_LIMIT) {
+        merge_local_list();
+        open_list = global_open_list.get();
+        exp_since_switch = 0;
+    } else if (open_list == global_open_list.get() && exp_since_switch >= GLOBAL_EXP_LIMIT) {
+        restart_local_list();
+        open_list = local_open_list.get();
+        exp_since_switch = 0;
+    }
 
     vector<const GlobalOperator*> applicable_ops;
     algorithms::OrderedSet<const GlobalOperator *> preferred_operators;
     StateID state_id = StateID::no_state;
 
     bool expand_random = (real_dist(rng) < EPSILON);
+    ++exp_since_switch;
     SearchStatus status = expand(expand_random, state_id, applicable_ops, preferred_operators);
-    ++exp_since_local_restart;
+    
+    if (status == FAILED) {
+        // When local search fails, try to get another state from the global queue
+        if (global_open_list->empty())
+            return FAILED;
+        else {
+            restart_local_list();
+            return IN_PROGRESS;
+        }
+    }
 
     if (status != IN_PROGRESS)
         return status;
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
-    
     random_walk(state_id, preferred_operators);
     return IN_PROGRESS;
 }
@@ -206,9 +214,6 @@ void ParametrizedSearch::restart_local_list() {
     local_open_list = open_list_factory->create_state_open_list();
     EvaluationContext eval_context(state, node.get_g(), true, &statistics);
     local_open_list->insert(eval_context, id);
-    // Expansion from the local queue isn't guaranteed, so keep (re-add) the state
-    // in the global queue too.
-    global_open_list->insert(eval_context, id);
 }
 
 void ParametrizedSearch::merge_local_list() {

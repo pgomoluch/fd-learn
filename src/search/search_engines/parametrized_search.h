@@ -28,7 +28,7 @@ class ParametrizedSearch : public SearchEngine {
     
     double EPSILON = 0.5;
     unsigned ROLLOUT_LENGTH = 20;
-    double P_LOCAL = 0.0;
+    unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
 
     const unsigned STALL_SIZE = 5;
@@ -42,7 +42,7 @@ class ParametrizedSearch : public SearchEngine {
     ScalarEvaluator *f_evaluator;
     std::vector<Heuristic*> heuristics;
     std::vector<Heuristic*> preferred_operator_heuristics;
-    unsigned exp_since_local_restart = 0;
+    unsigned exp_since_switch = 0;
     unsigned local_exp = 0;
     unsigned steps_at_action_start = 0;
     unsigned expansions_without_progress = 0;
