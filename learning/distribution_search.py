@@ -12,6 +12,8 @@ from transport_generator import TransportGenerator
 from parking_generator import ParkingGenerator
 from elevators_generator import ElevatorsGenerator
 from nomystery_generator import NomysteryGenerator
+from floortile_generator import FloortileGenerator
+from spanner_generator import SpannerGenerator
 
 iterations = 100
 heuristic = 'h1=ff(transform=adapt_costs(one))'
@@ -21,6 +23,8 @@ domain_path = '../../../IPC/own-transport/domain.pddl'
 #domain_path = '../../../IPC/own-parking/domain.pddl'
 #domain_path = '../../../IPC/own-elevators/domain.pddl'
 #domain_path = '../../../IPC/own-no-mystery/domain.pddl'
+#domain_path = '../../../IPC/own-floortile/domain.pddl'
+#domain_path = '../../../IPC/own-spanner/domain.pddl'
 # Transport
 confs = [    
     (4,7), (4,8), (4,9), (4,10),
