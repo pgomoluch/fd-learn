@@ -103,7 +103,7 @@ def score_params(params, paths_and_costs):
 
 CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1/$2
-/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} $3 $4 --heuristic {heuristic} --search {search}
+/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} $3 $4 --heuristic "{heuristic}" --search "{search}"
 """
 
 CONDOR_SPEC = """universe = vanilla
