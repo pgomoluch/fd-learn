@@ -10,19 +10,27 @@ import time
 
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
 
-PARAMS_PATH = 'params.txt'
+PARAMS_PATH = '../../params.txt'
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
 CONDOR_DIR = 'condor'
 
-MIN_PARAMS = [0.0, 0, 0.0, 1]
-MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
-
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
 
-N_TEST_PROBLEMS = 10
-RUNS_PER_PROBLEM = 5
+INITIAL_MEAN = [0.5, 10.0, 100.0, 100.0]
+INITIAL_STDDEV = [0.1, 2.0, 20.0, 20.0]
+
+MIN_PARAMS = [0.0, 0, 0, 0]
+MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf')]
+
+TARGET_TYPES = [float, int, int, int]
+
+
+POPULATION_SIZE = 10
+ELITE_SIZE = 2
+N_TEST_PROBLEMS = 5
+RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 5.0
 
 
@@ -42,10 +50,19 @@ def generate_next(params):
 
 def save_params(params, filename):
     f = open(filename, 'w')
-    for p in params:
+    for (p, t) in zip(params, TARGET_TYPES):
+        if t == int:
+            p = int(round(p))
         f.write(str(p))
         f.write('\n')
     f.close()
+
+def bound_params(params):
+    for i in range(len(params)):
+        if params[i] < MIN_PARAMS[i]:
+            params[i] = MIN_PARAMS[i]
+        elif params[i] > MAX_PARAMS[i]:
+            params[i] = MAX_PARAMS[i]
 
 def get_problem():
     if get_problem.problem_set is None:
@@ -102,81 +119,89 @@ def score_params(params, paths_and_costs):
 
 
 CONDOR_SCRIPT = """#!/bin/bash
-cd condor/$1/$2
-/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} $3 $4 --heuristic "{heuristic}" --search "{search}"
+cd condor/$1/$2/$3
+/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} $4 $5 --heuristic "{heuristic}" --search "{search}"
 """
 
 CONDOR_SPEC = """universe = vanilla
 executable = {condor_script}
-output = condor/{problem_id}/$(Process)/fd.out
-error = condor/{problem_id}/$(Process)/fd.err
+output = condor/{params_id}/{problem_id}/$(Process)/fd.out
+error = condor/{params_id}/{problem_id}/$(Process)/fd.err
 log = condor/condor.log
-arguments = {problem_id} $(Process) {domain} {problem}
+arguments = {params_id} {problem_id} $(Process) {domain} {problem}
 queue {runs_per_problem}
 """
 
 def setup_condor():
     if not os.path.exists(CONDOR_DIR):
         os.makedirs(CONDOR_DIR)
-    for i in range(N_TEST_PROBLEMS):
-        for j in range(RUNS_PER_PROBLEM):
-            path = os.path.join(CONDOR_DIR, str(i), str(j))
-            if not os.path.exists(path):
-                os.makedirs(path)
+    for h in range (POPULATION_SIZE):
+        for i in range(N_TEST_PROBLEMS):
+            for j in range(RUNS_PER_PROBLEM):
+                path = os.path.join(CONDOR_DIR, str(h), str(i), str(j))
+                if not os.path.exists(path):
+                    os.makedirs(path)
     condor_script_path = os.path.join(CONDOR_DIR, 'condor.sh')
     condor_file = open(condor_script_path, 'w')
     condor_file.write(CONDOR_SCRIPT.format(
         fd_path=os.path.abspath('../fast-downward.py'),
         time_limit=int(MAX_PROBLEM_TIME),
         heuristic=HEURISTIC,
-        search=SEARCH % os.path.abspath(PARAMS_PATH)))
+        search=SEARCH % PARAMS_PATH))
     condor_file.close()
     os.chmod(condor_script_path, 0o775)
 
-def condor_score_params(params, paths_and_costs, log=None):
-    save_params(params, PARAMS_PATH)
+def condor_score_params(all_params, paths_and_costs, log=None):
+
+    for params_id, params in enumerate(all_params):
+        save_params(params, os.path.join(CONDOR_DIR, str(params_id), 'params.txt'))
+        # Run len(paths_and_costs) * RUNS_PER_PROBLEM condor jobs
+        for problem_id, (problem_path, _) in enumerate(paths_and_costs):
+            condor_spec = CONDOR_SPEC.format(
+                condor_script=os.path.abspath('condor/condor.sh'),
+                params_id=params_id,
+                problem_id=problem_id,
+                problem=os.path.abspath(problem_path),
+                domain=os.path.abspath(DOMAIN),
+                runs_per_problem=RUNS_PER_PROBLEM)
+            condor_file = open('condor/condor.cmd', 'w')
+            condor_file.write(condor_spec)
+            condor_file.close()
+            time.sleep(1)
+            subprocess.check_call(['condor_submit', 'condor/condor.cmd'])
+        start_time = time.time()
     
-    # Run len(paths_and_costs) * RUNS_PER_PROBLEM condor jobs
-    for problem_id, (problem_path, _) in enumerate(paths_and_costs):
-        condor_spec = CONDOR_SPEC.format(
-            condor_script=os.path.abspath('condor/condor.sh'),
-            problem_id=problem_id,
-            problem=os.path.abspath(problem_path),
-            domain=os.path.abspath(DOMAIN),
-            runs_per_problem=RUNS_PER_PROBLEM)
-        condor_file = open('condor/condor.cmd', 'w')
-        condor_file.write(condor_spec)
-        condor_file.close()
-        subprocess.check_call(['condor_submit', 'condor/condor.cmd'])
-    start_time = time.time()
     print('Waiting for condor...')
     subprocess.check_call(['condor_wait', 'condor/condor.log'])
     elapsed_time = time.time() - start_time
-    print(len(paths_and_costs) * RUNS_PER_PROBLEM, 'jobs completed in',
+    print(POPULATION_SIZE * len(paths_and_costs) * RUNS_PER_PROBLEM, 'jobs completed in',
         str(round(elapsed_time,2)), 's.')
     if log:
         log.write(str(round(elapsed_time,2)) + '\n')
+        log.flush()
     
     # Aggregate the results
-    total_score = 0.0
-    for problem_id, (_, ref_cost) in enumerate(paths_and_costs):
-        for attempt in range(RUNS_PER_PROBLEM):
-            output_file = open('condor/{}/{}/fd.out'.format(problem_id,attempt))
-            planner_output = output_file.read()
-            output_file.close()
-            plan_cost = -1
-            try:
-                plan_cost = get_cost(planner_output)
-            except:
-                pass
-            try:
-                reward = compute_ipc_reward(plan_cost, ref_cost)
-            except:
-                reward = 0.0
-            total_score += reward
+    total_scores = []
+    for params_id in range(len(all_params)):
+        total_score = 0.0
+        for problem_id, (_, ref_cost) in enumerate(paths_and_costs):
+            for attempt in range(RUNS_PER_PROBLEM):
+                output_file = open('condor/{}/{}/{}/fd.out'.format(params_id,problem_id,attempt))
+                planner_output = output_file.read()
+                output_file.close()
+                plan_cost = -1
+                try:
+                    plan_cost = get_cost(planner_output)
+                except:
+                    pass
+                try:
+                    reward = compute_ipc_reward(plan_cost, ref_cost)
+                except:
+                    reward = 0.0
+                total_score += reward
+        total_scores.append(total_score)
     
-    return total_score
-
+    return total_scores
 
 
 DOMAIN = sys.argv[1]
@@ -190,22 +215,33 @@ condor_log = open('condor_log.txt', 'w')
 
 setup_condor()
 
+mean = np.array(INITIAL_MEAN)
+stddev = np.array(INITIAL_STDDEV)
+
 while time.time() - start_time < TRAINING_TIME:
     
+    print('Mean: ', mean)
+    print('Std dev: ', stddev)
+    
+    # Choose the test problems
     paths_and_costs = []
     for i in range(N_TEST_PROBLEMS):
         paths_and_costs.append(get_problem())
-    new_params = generate_next(params)
-    score = condor_score_params(params, paths_and_costs, condor_log)
-    new_score = condor_score_params(new_params, paths_and_costs)
     
-    print(params, score)
-    print(new_params, new_score)
-    if new_score > score:
-        print('Change accepted\n')
-        params = new_params
+    # Generate parameters
+    params = np.random.normal(mean, stddev, (POPULATION_SIZE, len(mean)))
+    for row in params:
+        bound_params(row)
+    
+    scores = condor_score_params(params, paths_and_costs, condor_log)
+    
+    scores = np.array(scores)
+    best_ids = np.argsort(scores)[:ELITE_SIZE]
+    mean = np.mean(params[best_ids], 0)
+    stddev = np.std(params[best_ids], 0)
 
-    params_log.write(str(params) + '\n')
+    params_log.write(str(mean) + ' ' + str(stddev) + '\n')
+    params_log.flush()
     
 params_log.close()
 condor_log.close()
