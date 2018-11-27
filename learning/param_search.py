@@ -119,17 +119,24 @@ def score_params(params, paths_and_costs):
 
 
 CONDOR_SCRIPT = """#!/bin/bash
-cd condor/$1/$2/$3
-/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} $4 $5 --heuristic "{heuristic}" --search "{search}"
+cd condor/$1
+i=0
+echo starting
+while read problem; do
+    cd $i
+    /usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $problem --heuristic "{heuristic}" --search "{search}" > fd.out
+    cd ..
+    ((i++))
+done < problems.txt
 """
 
 CONDOR_SPEC = """universe = vanilla
 executable = {condor_script}
-output = condor/{params_id}/{problem_id}/$(Process)/fd.out
-error = condor/{params_id}/{problem_id}/$(Process)/fd.err
+output = condor/$(Process)/condor.out
+error = condor/$(Process)/condor.err
 log = condor/condor.log
-arguments = {params_id} {problem_id} $(Process) {domain} {problem}
-queue {runs_per_problem}
+arguments = $(Process)
+queue {population_size}
 """
 
 def setup_condor():
@@ -137,68 +144,64 @@ def setup_condor():
         os.makedirs(CONDOR_DIR)
     for h in range (POPULATION_SIZE):
         for i in range(N_TEST_PROBLEMS):
-            for j in range(RUNS_PER_PROBLEM):
-                path = os.path.join(CONDOR_DIR, str(h), str(i), str(j))
-                if not os.path.exists(path):
-                    os.makedirs(path)
+            path = os.path.join(CONDOR_DIR, str(h), str(i))
+            if not os.path.exists(path):
+                os.makedirs(path)
     condor_script_path = os.path.join(CONDOR_DIR, 'condor.sh')
     condor_file = open(condor_script_path, 'w')
     condor_file.write(CONDOR_SCRIPT.format(
         fd_path=os.path.abspath('../fast-downward.py'),
         time_limit=int(MAX_PROBLEM_TIME),
+        domain=os.path.abspath(DOMAIN),
         heuristic=HEURISTIC,
         search=SEARCH % PARAMS_PATH))
     condor_file.close()
     os.chmod(condor_script_path, 0o775)
 
 def condor_score_params(all_params, paths_and_costs, log=None):
-
+    problem_list = os.linesep.join([os.path.abspath(p) for (p, _) in paths_and_costs]) + os.linesep
     for params_id, params in enumerate(all_params):
         save_params(params, os.path.join(CONDOR_DIR, str(params_id), 'params.txt'))
-        # Run len(paths_and_costs) * RUNS_PER_PROBLEM condor jobs
-        for problem_id, (problem_path, _) in enumerate(paths_and_costs):
-            condor_spec = CONDOR_SPEC.format(
-                condor_script=os.path.abspath('condor/condor.sh'),
-                params_id=params_id,
-                problem_id=problem_id,
-                problem=os.path.abspath(problem_path),
-                domain=os.path.abspath(DOMAIN),
-                runs_per_problem=RUNS_PER_PROBLEM)
-            condor_file = open('condor/condor.cmd', 'w')
-            condor_file.write(condor_spec)
-            condor_file.close()
-            time.sleep(1)
-            subprocess.check_call(['condor_submit', 'condor/condor.cmd'])
-        start_time = time.time()
+        problem_list_file = open(os.path.join(CONDOR_DIR, str(params_id), 'problems.txt'),'w')
+        problem_list_file.write(problem_list)
+        problem_list_file.close()
+    
+    condor_spec = CONDOR_SPEC.format(
+        condor_script=os.path.abspath('condor/condor.sh'),
+        population_size=POPULATION_SIZE)
+    condor_file = open('condor/condor.cmd', 'w')
+    condor_file.write(condor_spec)
+    condor_file.close()
+    start_time = time.time()
+    subprocess.check_call(['condor_submit', 'condor/condor.cmd'])
     
     print('Waiting for condor...')
     subprocess.check_call(['condor_wait', 'condor/condor.log'])
     elapsed_time = time.time() - start_time
-    print(POPULATION_SIZE * len(paths_and_costs) * RUNS_PER_PROBLEM, 'jobs completed in',
-        str(round(elapsed_time,2)), 's.')
+    print('{} jobs ({} runs) completed in {} s.'.format(
+        POPULATION_SIZE, POPULATION_SIZE * N_TEST_PROBLEMS, round(elapsed_time,2)))
     if log:
         log.write(str(round(elapsed_time,2)) + '\n')
         log.flush()
     
     # Aggregate the results
     total_scores = []
-    for params_id in range(len(all_params)):
+    for params_id in range(len(all_params)): # the same as POPULATION_SIZE
         total_score = 0.0
         for problem_id, (_, ref_cost) in enumerate(paths_and_costs):
-            for attempt in range(RUNS_PER_PROBLEM):
-                output_file = open('condor/{}/{}/{}/fd.out'.format(params_id,problem_id,attempt))
-                planner_output = output_file.read()
-                output_file.close()
-                plan_cost = -1
-                try:
-                    plan_cost = get_cost(planner_output)
-                except:
-                    pass
-                try:
-                    reward = compute_ipc_reward(plan_cost, ref_cost)
-                except:
-                    reward = 0.0
-                total_score += reward
+            output_file = open('condor/{}/{}/fd.out'.format(params_id,problem_id))
+            planner_output = output_file.read()
+            output_file.close()
+            plan_cost = -1
+            try:
+                plan_cost = get_cost(planner_output)
+            except:
+                pass
+            try:
+                reward = compute_ipc_reward(plan_cost, ref_cost)
+            except:
+                reward = 0.0
+            total_score += reward
         total_scores.append(total_score)
     
     return total_scores
