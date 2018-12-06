@@ -14,6 +14,7 @@ PARAMS_PATH = '../../params.txt'
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
 CONDOR_DIR = 'condor'
+THREADS = 4
 
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
@@ -27,9 +28,9 @@ MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf')]
 TARGET_TYPES = [float, int, int, int]
 
 
-POPULATION_SIZE = 10
-ELITE_SIZE = 2
-N_TEST_PROBLEMS = 5
+POPULATION_SIZE = 120
+ELITE_SIZE = 10
+N_TEST_PROBLEMS = 50
 RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 5.0
 
@@ -121,13 +122,26 @@ def score_params(params, paths_and_costs):
 CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1
 i=0
-echo starting
 while read problem; do
     cd $i
     /usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $problem --heuristic "{heuristic}" --search "{search}" > fd.out
     cd ..
     ((i++))
 done < problems.txt
+"""
+
+CONDOR_PAR_SCRIPT = """#!/bin/bash
+start=$(($1*{threads}))
+for ((i=0; i<{threads}; i++))
+do
+    {condor_script} $((start+i)) &
+    pid[$i]=$!
+done
+
+for p in ${{pid[*]}}
+do
+    wait $p
+done
 """
 
 CONDOR_SPEC = """universe = vanilla
@@ -139,6 +153,12 @@ arguments = $(Process)
 queue {population_size}
 """
 
+def get_condor_cluster(submit_output):
+    #TODO find a better way to get this number
+    space = submit_output.rfind(' ')
+    dot = submit_output.rfind('.')
+    return int(submit_output[space+1 : dot])
+
 def setup_condor():
     if not os.path.exists(CONDOR_DIR):
         os.makedirs(CONDOR_DIR)
@@ -147,6 +167,7 @@ def setup_condor():
             path = os.path.join(CONDOR_DIR, str(h), str(i))
             if not os.path.exists(path):
                 os.makedirs(path)
+    # Condor script
     condor_script_path = os.path.join(CONDOR_DIR, 'condor.sh')
     condor_file = open(condor_script_path, 'w')
     condor_file.write(CONDOR_SCRIPT.format(
@@ -156,7 +177,16 @@ def setup_condor():
         heuristic=HEURISTIC,
         search=SEARCH % PARAMS_PATH))
     condor_file.close()
+    # Condor parallel script
+    condor_par_script_path = os.path.join(CONDOR_DIR, 'condor_par.sh')
+    condor_par_file = open(condor_par_script_path, 'w')
+    condor_par_file.write(CONDOR_PAR_SCRIPT.format(
+        threads=THREADS,
+        condor_script=os.path.join('.', CONDOR_DIR, 'condor.sh')))
+    condor_par_file.close()
+    
     os.chmod(condor_script_path, 0o775)
+    os.chmod(condor_par_script_path, 0o775)
 
 def condor_score_params(all_params, paths_and_costs, log=None):
     problem_list = os.linesep.join([os.path.abspath(p) for (p, _) in paths_and_costs]) + os.linesep
@@ -167,19 +197,26 @@ def condor_score_params(all_params, paths_and_costs, log=None):
         problem_list_file.close()
     
     condor_spec = CONDOR_SPEC.format(
-        condor_script=os.path.abspath('condor/condor.sh'),
-        population_size=POPULATION_SIZE)
+        condor_script=os.path.abspath('condor/condor_par.sh'),
+        population_size=POPULATION_SIZE/THREADS)
     condor_file = open('condor/condor.cmd', 'w')
     condor_file.write(condor_spec)
     condor_file.close()
     start_time = time.time()
-    subprocess.check_call(['condor_submit', 'condor/condor.cmd'])
+    submit_output = subprocess.check_output(['condor_submit', 'condor/condor.cmd']).decode('utf-8')
+    cluster_id = get_condor_cluster(submit_output)
     
     print('Waiting for condor...')
-    subprocess.check_call(['condor_wait', 'condor/condor.log'])
+    #subprocess.check_call(['condor_wait', 'condor/condor.log'])
+    # Discard the last 10% of jobs
+    subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * POPULATION_SIZE/THREADS))])
+    try:
+        subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
+    except:
+        print('condor_rm failed')
     elapsed_time = time.time() - start_time
     print('{} jobs ({} runs) completed in {} s.'.format(
-        POPULATION_SIZE, POPULATION_SIZE * N_TEST_PROBLEMS, round(elapsed_time,2)))
+        POPULATION_SIZE/THREADS, POPULATION_SIZE * N_TEST_PROBLEMS, round(elapsed_time,2)))
     if log:
         log.write(str(round(elapsed_time,2)) + '\n')
         log.flush()
@@ -189,9 +226,17 @@ def condor_score_params(all_params, paths_and_costs, log=None):
     for params_id in range(len(all_params)): # the same as POPULATION_SIZE
         total_score = 0.0
         for problem_id, (_, ref_cost) in enumerate(paths_and_costs):
-            output_file = open('condor/{}/{}/fd.out'.format(params_id,problem_id))
+            # Determine task completion in current iteration, based on sas_plan existence
+            sas_plan_path = 'condor/{}/{}/sas_plan'.format(params_id,problem_id)
+            if not os.path.exists(sas_plan_path):
+                continue
+            os.remove(sas_plan_path)
+            
+            output_path = 'condor/{}/{}/fd.out'.format(params_id,problem_id)
+            output_file = open(output_path)
             planner_output = output_file.read()
             output_file.close()
+            
             plan_cost = -1
             try:
                 plan_cost = get_cost(planner_output)
