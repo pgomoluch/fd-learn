@@ -66,8 +66,14 @@ void ParametrizedSearch::initialize() {
     if(params_file) {
         params_file >> EPSILON;
         params_file >> ROLLOUT_LENGTH;
-        params_file >> GLOBAL_EXP_LIMIT;
-        params_file >> LOCAL_EXP_LIMIT;
+
+        unsigned cycle_length;
+        double percentage_local;
+        params_file >> cycle_length;
+        params_file >> percentage_local;
+        // cycle_length == GLOBAL_EXP_LIMIT + LOCAL_EXP_LIMIT
+        GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
+        LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;
 
         params_file.close();
     }
