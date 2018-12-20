@@ -10,22 +10,24 @@ import time
 
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
 
-PARAMS_PATH = '../../params.txt'
+PARAMS_PATH = '../params.txt'
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
 CONDOR_DIR = 'condor'
 THREADS = 4
 
+# Random walk optimization
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
 
-INITIAL_MEAN = [0.5, 10.0, 100.0, 100.0]
-INITIAL_STDDEV = [0.1, 2.0, 20.0, 20.0]
+# Cross-entropy Method
+INITIAL_MEAN = [0.5, 10.0, 200.0, 0.5]
+INITIAL_STDDEV = [0.5, 10.0, 200.0, 0.5]
 
 MIN_PARAMS = [0.0, 0, 0, 0]
-MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf')]
+MAX_PARAMS = [1.0, float('inf'), float('inf'), 1.0]
 
-TARGET_TYPES = [float, int, int, int]
+TARGET_TYPES = [float, int, int, float]
 
 
 POPULATION_SIZE = 120
@@ -150,6 +152,7 @@ output = condor/$(Process)/condor.out
 error = condor/$(Process)/condor.err
 log = condor/condor.log
 arguments = $(Process)
+requirements = regexp("^sprite[0-9][0-9]", TARGET.Machine)
 queue {population_size}
 """
 
@@ -257,7 +260,6 @@ PROBLEM_DIR = sys.argv[2]
 TRAINING_TIME = int(sys.argv[3])
 
 start_time = time.time()
-params = INITIAL_PARAMS
 params_log = open('params_log.txt', 'w')
 condor_log = open('condor_log.txt', 'w')
 
@@ -280,14 +282,25 @@ while time.time() - start_time < TRAINING_TIME:
     params = np.random.normal(mean, stddev, (POPULATION_SIZE, len(mean)))
     for row in params:
         bound_params(row)
-    
+    # For debugging: fix the parameters
+    #params = np.concatenate((
+    #    np.tile(np.array([[0.2,0,1000,0.0]]), (POPULATION_SIZE//2, 1)),
+    #    np.tile(np.array([[0.2,20,100,0.9]]), (POPULATION_SIZE//2, 1))),
+    #    axis=0)
+
     scores = condor_score_params(params, paths_and_costs, condor_log)
     
     scores = np.array(scores)
-    best_ids = np.argsort(scores)[:ELITE_SIZE]
+    sorted_ids = np.argsort(-scores)
+    best_ids = sorted_ids[:ELITE_SIZE]
     mean = np.mean(params[best_ids], 0)
     stddev = np.std(params[best_ids], 0)
 
+    condor_log.write('Best parameters:\n')
+    for i in sorted_ids:
+        condor_log.write(str(params[i]) + ' ' + str(scores[i]) + ' ' + str(i) + '\n')
+    condor_log.write('\n')
+    condor_log.flush()
     params_log.write(str(mean) + ' ' + str(stddev) + '\n')
     params_log.flush()
     
