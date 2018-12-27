@@ -34,7 +34,7 @@ class LearningSearch : public SearchEngine {
     const std::vector<unsigned> STATE_SPACE = {2,2};
 
     // Learning hyperparameters
-    const double EPSILON = 0.5;
+    const double EPSILON = 0.2;
     const double INITIAL_WEIGHT = 0.0;
 
     RandomAccessStateOpenList *open_list;

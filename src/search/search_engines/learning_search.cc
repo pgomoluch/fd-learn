@@ -387,7 +387,10 @@ StateID LearningSearch::get_best_state() {
 }
 
 StateID LearningSearch::get_randomized_state() {
-    return open_list->remove_epsilon();
+    if (real_dist(rng) < EPSILON)
+        return open_list->remove_random();
+    else
+        return open_list->remove_min();
 }
 
 void LearningSearch::update_routine() {
