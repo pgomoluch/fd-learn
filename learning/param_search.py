@@ -21,13 +21,14 @@ INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
 
 # Cross-entropy Method
-INITIAL_MEAN = [0.5, 10.0, 200.0, 0.5]
-INITIAL_STDDEV = [0.5, 10.0, 200.0, 0.5]
+# [epsilon, stall_size, random_walk_length, cycle_length, fraction_local]
+INITIAL_MEAN = [0.5, 10.0, 10.0, 200.0, 0.5]
+INITIAL_STDDEV = [0.5, 10.0, 10.0, 200.0, 0.5]
 
-MIN_PARAMS = [0.0, 0, 0, 0]
-MAX_PARAMS = [1.0, float('inf'), float('inf'), 1.0]
+MIN_PARAMS = [0.0, 0, 0, 0, 0]
+MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf'), 1.0]
 
-TARGET_TYPES = [float, int, int, float]
+TARGET_TYPES = [float, int, int, int, float]
 
 
 POPULATION_SIZE = 120

@@ -65,6 +65,7 @@ void ParametrizedSearch::initialize() {
     ifstream params_file(params_path);
     if(params_file) {
         params_file >> EPSILON;
+        params_file >> STALL_SIZE;
         params_file >> ROLLOUT_LENGTH;
 
         unsigned cycle_length;

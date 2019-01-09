@@ -30,8 +30,8 @@ class ParametrizedSearch : public SearchEngine {
     unsigned ROLLOUT_LENGTH = 20;
     unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
+    unsigned STALL_SIZE = 10;
 
-    const unsigned STALL_SIZE = 5;
     const std::vector<unsigned> STATE_SPACE = {2,2};
 
     RandomAccessStateOpenList *open_list;
