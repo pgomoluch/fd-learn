@@ -28,6 +28,7 @@ class ParametrizedSearch : public SearchEngine {
     
     double EPSILON = 0.5;
     unsigned ROLLOUT_LENGTH = 20;
+    unsigned N_ROLLOUTS = 5;
     unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
     unsigned STALL_SIZE = 10;

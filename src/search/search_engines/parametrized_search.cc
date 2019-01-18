@@ -66,6 +66,7 @@ void ParametrizedSearch::initialize() {
     if(params_file) {
         params_file >> EPSILON;
         params_file >> STALL_SIZE;
+        params_file >> N_ROLLOUTS;
         params_file >> ROLLOUT_LENGTH;
 
         unsigned cycle_length;
@@ -148,7 +149,13 @@ SearchStatus ParametrizedSearch::step() {
 
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
-    random_walk(state_id, preferred_operators);
+    for (unsigned i = 0; i < N_ROLLOUTS; ++i) {
+        learning_log << i << ' ';
+        random_walk(state_id, preferred_operators);
+        if (expansions_without_progress == 0)
+            break;
+    }
+    learning_log << "\n";
     return IN_PROGRESS;
 }
 
