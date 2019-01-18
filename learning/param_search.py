@@ -269,6 +269,8 @@ setup_condor()
 mean = np.array(INITIAL_MEAN)
 stddev = np.array(INITIAL_STDDEV)
 
+np.set_printoptions(suppress=True,precision=4)
+
 while time.time() - start_time < TRAINING_TIME:
     
     print('Mean: ', mean)
@@ -304,6 +306,8 @@ while time.time() - start_time < TRAINING_TIME:
     condor_log.flush()
     params_log.write(str(mean) + ' ' + str(stddev) + '\n')
     params_log.flush()
+    
+    save_params(mean, 'params.txt')
     
 params_log.close()
 condor_log.close()
