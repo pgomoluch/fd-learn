@@ -226,6 +226,7 @@ def condor_score_params(all_params, paths_and_costs, log=None):
         log.flush()
     
     # Aggregate the results
+    aggregation_start = time.time()
     total_scores = []
     for params_id in range(len(all_params)): # the same as POPULATION_SIZE
         total_score = 0.0
@@ -253,6 +254,7 @@ def condor_score_params(all_params, paths_and_costs, log=None):
             total_score += reward
         total_scores.append(total_score)
     
+    print('Aggregation of the results took {} s.'.format(round(time.time()-aggregation_start)))
     return total_scores
 
 
@@ -267,14 +269,14 @@ condor_log = open('condor_log.txt', 'w')
 setup_condor()
 
 mean = np.array(INITIAL_MEAN)
-stddev = np.array(INITIAL_STDDEV)
+cov = np.diag(np.square(INITIAL_STDDEV))
 
 np.set_printoptions(suppress=True,precision=4)
 
 while time.time() - start_time < TRAINING_TIME:
     
     print('Mean: ', mean)
-    print('Std dev: ', stddev)
+    print('Covariance:\n', cov)
     
     # Choose the test problems
     paths_and_costs = []
@@ -282,7 +284,7 @@ while time.time() - start_time < TRAINING_TIME:
         paths_and_costs.append(get_problem())
     
     # Generate parameters
-    params = np.random.normal(mean, stddev, (POPULATION_SIZE, len(mean)))
+    params = np.random.multivariate_normal(mean, cov, POPULATION_SIZE)
     for row in params:
         bound_params(row)
     # For debugging: fix the parameters
@@ -297,14 +299,14 @@ while time.time() - start_time < TRAINING_TIME:
     sorted_ids = np.argsort(-scores)
     best_ids = sorted_ids[:ELITE_SIZE]
     mean = np.mean(params[best_ids], 0)
-    stddev = np.std(params[best_ids], 0)
+    cov = np.cov(params[best_ids], rowvar=False)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:
         condor_log.write(str(params[i]) + ' ' + str(scores[i]) + ' ' + str(i) + '\n')
     condor_log.write('\n')
     condor_log.flush()
-    params_log.write(str(mean) + ' ' + str(stddev) + '\n')
+    params_log.write(str(mean) + '\n' + str(cov) + '\n\n')
     params_log.flush()
     
     save_params(mean, 'params.txt')
