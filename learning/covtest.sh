@@ -3,6 +3,9 @@
 # Ex1: covtest.sh ../IPC/transport "--search eager_greedy(cea)" 60
 # Ex2: covtest.sh ../IPC/transport "--heuristic h=ff() --search eager_greedy([h],preferred=[h])"
 
+OUT_OF_TIME_CHAR="T"
+OUT_OF_MEMORY_CHAR="M"
+
 base_counter=0
 counter=0
 results=()
@@ -18,7 +21,8 @@ do
     #fd_command="../fast-downward.py --build=release64 --alias lama-first $1/domain.pddl $p"
     echo $fd_command
     timeout $3 $fd_command > covtest-tmp-result
-    if [ $? -eq 0 ]
+    return_code=$?
+    if [ $return_code -eq 0 ]
     then
         counter=$((counter+1))
         results=(${results[@]} 1)
@@ -30,11 +34,17 @@ do
         search_times=(${search_times[@]} $search_time)
         echo "Solved ${p}."
     else
+        if [ $return_code -eq 124 ]
+        then
+            problem_char=$OUT_OF_TIME_CHAR
+        else
+            problem_char=$OUT_OF_MEMORY_CHAR
+        fi
         echo "Failed ${p}."
         results=(${results[@]} 0)
-        n_states=(${n_states[@]} "F")
-        plan_costs=(${plan_costs[@]} "F")
-        search_times=(${search_times[@]} "F")
+        n_states=(${n_states[@]} $problem_char)
+        plan_costs=(${plan_costs[@]} $problem_char)
+        search_times=(${search_times[@]} $problem_char)
     fi
 done
 echo "RESULTS:"

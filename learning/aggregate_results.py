@@ -30,12 +30,12 @@ def extract_results(filename):
     m2 = re.search('[0-9]+', m.group(0))
     n_solved = int(m2.group(0))
     
-    m = re.search('PLAN COSTS:\n(([0-9]+|F) )+([0-9]+|F)', file_content)
-    m2 = re.search('(([0-9]+|F) )+([0-9]+|F)', m.group(0))
+    m = re.search('PLAN COSTS:\n(([0-9]+|F|T|M) )+([0-9]+|F|T|M)', file_content)
+    m2 = re.search('(([0-9]+|F|T|M) )+([0-9]+|F|T|M)', m.group(0))
     costs = m2.group(0).split()
     
-    m = re.search('SEARCH TIMES:\n((([0-9\.]+s)|F) )+(([0-9\.]+s)|F)', file_content)
-    times_string = m.group(0).replace('SEARCH TIMES:\n','').replace('s', '').replace('F', '')
+    m = re.search('SEARCH TIMES:\n((([0-9\.]+s)|F|T|M) )+(([0-9\.]+s)|F|T|M)', file_content)
+    times_string = m.group(0).replace('SEARCH TIMES:\n','').replace('s', '').replace('F', '').replace('T','').replace('M','')
     times = [float(x) for x in times_string.split()]
     
     return Result(n_solved, costs, times)
