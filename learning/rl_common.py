@@ -27,9 +27,8 @@ def get_output_with_timeout(command, timeout):
 def get_cost(planner_output):
     if not isinstance(planner_output, str):
         planner_output = planner_output.decode('utf-8')
-    m = re.search('Plan cost: [0-9]+', planner_output)
-    m2 = re.search('[0-9]+', m.group(0))
-    cost = int(m2.group(0))
+    m_iter = re.finditer('(Plan cost: )([0-9]+)', planner_output)
+    cost = min([int(m.group(2)) for m in m_iter]) 
     return cost
 
 def compute_reference_costs(domain_path, problem_path, ref_confs, heuristic, timeout):
