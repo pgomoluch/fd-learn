@@ -46,6 +46,10 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
     char buf[100];
     
     auto features = state_encoder.encode(global_state);
+
+    if (state_encoder.is_infinite())
+        return EvaluationResult::INFTY;
+
     unsigned n_written = write(fd, &(features[0]), features.size()*sizeof(double));
     if(n_written < features.size()*sizeof(double)) //TMP
         throw 77;
@@ -65,12 +69,6 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
 
     //if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
     //    return 2147483647;
-
-    if (state_encoder.is_dead_end())
-    {
-        cout << "##### DEAD_END!" << endl;
-        return DEAD_END;
-    }
 
     /*if (is_scaling_initialized)
         result *= scaling_factor;
