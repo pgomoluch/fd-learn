@@ -67,17 +67,13 @@ int ExternalHeuristic::compute_heuristic(const GlobalState &global_state) {
     for (auto op: state_encoder.get_preferred_operators())
         set_preferred(op);
 
-    //if(result > 2000000000.0) // I would comapre to max(int), but precision issues?
-    //    return 2147483647;
-
-    /*if (is_scaling_initialized)
-        result *= scaling_factor;
-    else
+    if (!is_scaling_initialized)
     {
-        scaling_factor = INITIAL_STATE_VALUE / result;
-        result = INITIAL_STATE_VALUE;
+        scaling_factor = numeric_limits<int>::max() / (8 * result);
         is_scaling_initialized = true;
-    }*/
+    }
+
+    result *= scaling_factor;
     
     return result;
 }

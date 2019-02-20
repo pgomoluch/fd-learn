@@ -3,7 +3,9 @@ import time
 import subprocess
 
 
-ipc_generator = '../../../IPC/own-transport/generator14L/city-generator.py'
+#ipc_generator = '../../../IPC/own-transport/generator14L/city-generator.py'
+#ipc_generator = '../../../IPC/own-transport/generator14L/two-cities-generator.py'
+ipc_generator = '../../../IPC/own-transport/generator14L/three-cities-generator.py'
 
 
 class TransportGenerator:
@@ -14,7 +16,7 @@ class TransportGenerator:
         
         self.nodes = 15
         self.size = 1000
-        self.degree = 3
+        self.degree = 4
         self.mindistance = 100
     
     def generate(self, result_path = 'problem.pddl'):

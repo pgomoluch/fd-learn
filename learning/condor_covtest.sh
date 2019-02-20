@@ -22,11 +22,17 @@ do
 done
 
 CONDOR_SCRIPT="#!/bin/bash
+#cd rsvm
+#./build/server &
+#server_pid=$!
+#cd -
 cd ${COVTEST_DIR}/\$1
 fd_command=\"/usr/bin/python ../../../fast-downward.py --build release64 --overall-memory-limit 4G ${problem_dir}/domain.pddl \`cat problem_name.txt\` $config\"
 echo \$fd_command
 timeout $time_limit \$fd_command
-printf \$? > return.txt"
+printf \$? > return.txt
+#kill ${server_pid}
+#rm /tmp/fd-learn-socket"
 
 CONDOR_SPEC="universe = vanilla
 executable = ${COVTEST_DIR}/condor.sh
@@ -63,6 +69,11 @@ do
         search_time=`awk '/Search time: [\.0-9]+s/ {print $3}' ${COVTEST_DIR}/${counter}/condor.out`
         search_times=(${search_times[@]} $search_time)
         ((solved++))
+        # Retain data for future training
+        #mv ${COVTEST_DIR}/${counter}/features.txt data-tmp/features${counter}.txt
+        #mv ${COVTEST_DIR}/${counter}/labels.txt data-tmp/labels${counter}.txt
+        #mv ${COVTEST_DIR}/${counter}/states.txt data-tmp/states${counter}.txt
+        #mv ${COVTEST_DIR}/${counter}/sas_plan data-tmp/sas_plan${counter}
     else
         if [ $return_code -eq 124 ]
         then
