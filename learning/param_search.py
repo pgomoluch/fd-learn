@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import ast
 import glob
 import numpy as np
 import os
@@ -70,11 +71,29 @@ def bound_params(params):
 
 def get_problem():
     if get_problem.problem_set is None:
-        get_problem.problem_set = glob.glob(PROBLEM_DIR + '/p*.pddl')
-        get_problem.costs = np.load(PROBLEM_DIR + '/costs.npy').item()
-    problem = random.choice(get_problem.problem_set)
-    print(problem)
-    return (problem, get_problem.costs[problem.split('/')[-1]])
+        problems = glob.glob(PROBLEM_DIR + '/p*.pddl')
+        cost_dict_path = os.path.join(PROBLEM_DIR, 'costs.npy')
+        if os.path.exists(cost_dict_path):
+            # Old cost format: a single dictionary of minimum costs 
+            costs = np.load(cost_dict_path).item()
+            get_problem.problem_set = [ (p, costs[p.split('/')[-1]]) for p in problems ]
+        else:
+            # New cost format: per-problem dictionaries of costs obtained
+            # with different configurations.
+            get_problem.problem_set = []
+            for p in problems:
+                costs_path = p.replace('.pddl', 'costs.txt')
+                costs = ast.literal_eval(open(costs_path).read())
+                costs = list(filter(lambda x: x >= 0, costs.values()))
+                if len(costs) > 0:
+                    c = min(costs)
+                else:
+                    c = -1
+                get_problem.problem_set.append((p,c))
+                
+    problem_and_cost = random.choice(get_problem.problem_set)
+    print(problem_and_cost)
+    return problem_and_cost
 
 get_problem.problem_set = None
 get_problem.costs = None
