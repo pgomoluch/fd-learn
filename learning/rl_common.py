@@ -61,3 +61,12 @@ def compute_ipc_reward(plan_cost, reference_cost):
         raise NoRewardException()
     else:
         return reference_cost / plan_cost
+
+def save_params(params, target_types, filename):
+    f = open(filename, 'w')
+    for (p, t) in zip(params, target_types):
+        if t == int:
+            p = int(round(p))
+        f.write(str(p))
+        f.write('\n')
+    f.close()
