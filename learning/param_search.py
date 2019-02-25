@@ -155,6 +155,7 @@ else:
 
 np.set_printoptions(suppress=True,precision=4)
 
+difficulty_level = 0
 while time.time() - start_time < TRAINING_TIME:
     
     print('Mean: ', mean)
@@ -201,6 +202,17 @@ while time.time() - start_time < TRAINING_TIME:
     state_file = open(STATE_FILE_PATH, 'wb')
     np.savez(state_file, mean=mean, cov=cov)
     state_file.close()
+    
+    if GENERATE_PROBLEMS:
+        # Adjust problem difficulty based on current scores
+        if scores[sorted_ids[POPULATION_SIZE // 2]] < 0.001:
+            print('Decreasing problem difficulty...')
+            generator.easier()
+            difficulty_level -= 1
+        elif scores[sorted_ids[3 * POPULATION_SIZE // 4]] > 0.001 and difficulty_level < 0:
+            print('Increasing problem difficulty...')
+            generator.harder()
+            difficulty_level += 1
     
 params_log.close()
 condor_log.close()
