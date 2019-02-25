@@ -9,6 +9,7 @@ from rl_common import get_cost, compute_ipc_reward, save_params
 CONDOR_DIR = 'condor'
 PARAMS_PATH = '../params.txt'
 THREADS = 4
+ONLINE_REFERENCE_COSTS = True
 
 CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1
@@ -120,13 +121,13 @@ class CondorEvaluator:
         
         # Aggregate the results
         aggregation_start = time.time()
-        total_scores = []
+        iteration_costs = np.zeros([self._population_size, self._n_test_problems])
         for params_id in range(self._population_size):
-            total_score = 0.0
             for problem_id, (_, ref_cost) in enumerate(paths_and_costs):
                 # Determine task completion in current iteration, based on sas_plan existence
                 sas_plan_path = 'condor/{}/{}/sas_plan'.format(params_id,problem_id)
                 if not os.path.exists(sas_plan_path):
+                    iteration_costs[params_id, problem_id] = -1
                     continue
                 os.remove(sas_plan_path)
                 
@@ -140,8 +141,32 @@ class CondorEvaluator:
                     plan_cost = get_cost(planner_output)
                 except:
                     pass
+                iteration_costs[params_id, problem_id] = plan_cost
+        if ONLINE_REFERENCE_COSTS:
+            # Update the reference costs using the costs from this iteration
+            print(iteration_costs)
+            reference_costs = []
+            for (_, old_ref), costs in zip(paths_and_costs, iteration_costs.T):
+                actual_costs = [c for c in costs if c > 0.0] 
+                if actual_costs:
+                    if old_ref > 0.0:
+                        new_ref = min(old_ref, min(actual_costs))
+                    else:
+                        new_ref = min(actual_costs)
+                else:
+                    new_ref = old_ref
+                reference_costs.append(new_ref)
+        else:
+            (_, reference_costs) = paths_and_costs 
+        print(reference_costs)       
+        
+        # Compute the scores
+        total_scores = []
+        for params_id in range(self._population_size):
+            total_score = 0.0
+            for problem_id, ref_cost in enumerate(reference_costs):
                 try:
-                    reward = compute_ipc_reward(plan_cost, ref_cost)
+                    reward = compute_ipc_reward(iteration_costs[params_id, problem_id], ref_cost)
                 except:
                     reward = 0.0
                 total_score += reward
