@@ -35,6 +35,7 @@ N_TEST_PROBLEMS = 10
 RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 5.0
 
+STATE_FILE_PATH = 'search_state.npz'
 
 def generate_next(params):
     param_id = random.randint(0, len(params)-1)
@@ -114,10 +115,14 @@ def score_params(params, paths_and_costs):
     
     return total_score
 
+continuing = False
 
 DOMAIN = sys.argv[1]
 PROBLEM_DIR = sys.argv[2]
 TRAINING_TIME = int(sys.argv[3])
+if len(sys.argv) > 4:
+    continuing = True
+    STATE_FILE_PATH = sys.argv[4]
 
 start_time = time.time()
 params_log = open('params_log.txt', 'w')
@@ -132,8 +137,15 @@ evaluator = CondorEvaluator(
     search_str = SEARCH,
     max_problem_time = MAX_PROBLEM_TIME)
 
-mean = np.array(INITIAL_MEAN)
-cov = np.diag(np.square(INITIAL_STDDEV))
+if continuing:
+    state_file = open(STATE_FILE_PATH, 'rb')
+    npz_content = np.load(state_file)
+    mean = npz_content['mean']
+    cov = npz_content['cov']
+    state_file.close()
+else:
+    mean = np.array(INITIAL_MEAN)
+    cov = np.diag(np.square(INITIAL_STDDEV))
 
 np.set_printoptions(suppress=True,precision=4)
 
@@ -175,6 +187,9 @@ while time.time() - start_time < TRAINING_TIME:
     params_log.flush()
     
     save_params(mean, TARGET_TYPES, 'params.txt')
+    state_file = open(STATE_FILE_PATH, 'wb')
+    np.savez(state_file, mean=mean, cov=cov)
+    state_file.close()
     
 params_log.close()
 condor_log.close()
