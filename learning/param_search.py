@@ -12,6 +12,8 @@ import time
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs, compute_ipc_reward, save_params
 from condor_evaluator import CondorEvaluator
 
+from problem_generators.transport_generator import TransportGenerator
+
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
 
@@ -36,6 +38,10 @@ RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 5.0
 
 STATE_FILE_PATH = 'search_state.npz'
+GENERATE_PROBLEMS = True
+
+if GENERATE_PROBLEMS:
+    generator = TransportGenerator(4,9)
 
 def generate_next(params):
     param_id = random.randint(0, len(params)-1)
@@ -157,7 +163,12 @@ while time.time() - start_time < TRAINING_TIME:
     # Choose the test problems
     paths_and_costs = []
     for i in range(N_TEST_PROBLEMS):
-        paths_and_costs.append(get_problem())
+        if GENERATE_PROBLEMS:
+            problem_path = 'tmp-problems/p' + str(i) + '.pddl'
+            generator.generate(problem_path)
+            paths_and_costs.append((problem_path, -1))
+        else:
+            paths_and_costs.append(get_problem())
     
     # Generate parameters
     params = np.random.multivariate_normal(mean, cov, POPULATION_SIZE)

@@ -4,11 +4,10 @@ import subprocess
 import sys
 import time
 
-sys.path.append('problem-generators')
-from transport_generator import TransportGenerator
-from parking_generator import ParkingGenerator
-from elevators_generator import ElevatorsGenerator
-from nomystery_generator import NomysteryGenerator
+from problem_generators.transport_generator import TransportGenerator
+from problem_generators.parking_generator import ParkingGenerator
+from problem_generators.elevators_generator import ElevatorsGenerator
+from problem_generators.nomystery_generator import NomysteryGenerator
 
 N_TRUCKS = 4
 N_PACKAGES = 9

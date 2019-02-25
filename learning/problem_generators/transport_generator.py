@@ -28,8 +28,9 @@ class TransportGenerator:
         problem_file.write(problem)
         problem_file.close()
         # Remove the tex file created by the generator
-        os.remove('city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex'
-            % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed)))
+        tex_path = 'city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex' % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed))
+        if os.path.exists(tex_path):
+            os.remove(tex_path)
     
     def generate_batch(self, n, base_path = 'problem'):
         for i in range(1, n+1):

@@ -17,11 +17,10 @@ from threading import Timer, Thread
 
 from rl_common import *
 
-sys.path.append('problem-generators')
-from transport_generator import TransportGenerator
-from parking_generator import ParkingGenerator
-from elevators_generator import ElevatorsGenerator
-from nomystery_generator import NomysteryGenerator
+from problem_generators.transport_generator import TransportGenerator
+from problem_generators.parking_generator import ParkingGenerator
+from problem_generators.elevators_generator import ElevatorsGenerator
+from problem_generators.nomystery_generator import NomysteryGenerator
 
 
 heuristic = 'h1=ff(transform=adapt_costs(one))'
