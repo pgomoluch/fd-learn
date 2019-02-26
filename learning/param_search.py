@@ -213,6 +213,7 @@ while time.time() - start_time < TRAINING_TIME:
             print('Increasing problem difficulty...')
             generator.harder()
             difficulty_level += 1
+        print(generator)
     
 params_log.close()
 condor_log.close()

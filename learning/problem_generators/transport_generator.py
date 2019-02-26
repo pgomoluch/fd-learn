@@ -19,6 +19,9 @@ class TransportGenerator:
         self.degree = 4
         self.mindistance = 100
     
+    def __str__(self):
+        return 'TransportGenerator(%d trucks, %d packages)' % (self.trucks, self.packages)    
+    
     def generate(self, result_path = 'problem.pddl'):
         seed = time.time()
         ipc_generator_command = ['python2', ipc_generator, str(self.nodes), str(self.size),

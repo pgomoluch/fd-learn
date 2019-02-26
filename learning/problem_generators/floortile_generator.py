@@ -11,6 +11,10 @@ class FloortileGenerator:
         self.columns = columns
         self.robots = robots
     
+    def __str__(self):
+        return 'FloortileGenerator(%d rows, %d columns, %d robots)' % (
+            self.rows, self.columns, self.robots)
+    
     def generate(self, result_path = 'problem.pddl'):
         ipc_generator_command = ['python', ipc_generator, 'problem',
            str(self.rows), str(self.columns), str(self.robots), 'seq']
@@ -23,3 +27,15 @@ class FloortileGenerator:
         for i in range(1, n+1):
             path = base_path + str(i) + '.pddl'
             self.generate(path)
+    
+    def easier(self):
+        if self.rows > self.columns + 1:
+            self.rows -= 1
+        else:
+            self.columns -= 1
+    
+    def harder(self):
+        if self.rows > self.columns + 1:
+            self.columns += 1
+        else:
+            self.rows += 1

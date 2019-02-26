@@ -15,6 +15,9 @@ class ElevatorsGenerator:
             'area_size': area_size, 'n_fast': n_fast, 'n_slow': n_slow,
             'slow_capacity': self.SLOW_CAPACITY,
             'fast_capacity': self.FAST_CAPACITY}
+    
+    def __str__(self):
+        return 'ElevatorsGenerator' + str(self.params)
 
     def generate(self, result_path = 'problem.pddl'):
         comm1 = ipc_generator1.format(**self.params).split(' ')
@@ -30,3 +33,10 @@ class ElevatorsGenerator:
             path = base_path + str(i) + '.pddl'
             self.generate(path)
             time.sleep(1.1)
+    
+    def easier(self):
+        if self.params['passengers'] > 1:
+            self.params['passengers'] -= 1
+
+    def harder(self):
+        self.params['passengers'] += 1

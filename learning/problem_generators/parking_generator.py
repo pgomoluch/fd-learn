@@ -9,6 +9,9 @@ class ParkingGenerator:
     def __init__(self, curbs, cars):
         self.curbs = curbs
         self.cars = cars
+    
+    def __str__(self):
+        return 'ParkingGenerator(%d curbs, %d cars)' % (self.curbs, self.cars)
         
     def generate(self, result_path = 'problem.pddl'):
         ipc_generator_command = ['perl', ipc_generator,
@@ -22,3 +25,12 @@ class ParkingGenerator:
         for i in range(1, n+1):
             path = base_path + str(i) + '.pddl'
             self.generate(path)
+    
+    def easier(self):
+        if self.curbs > 3:
+            self.curbs -= 1
+            self.cars -= 2
+    
+    def harder(self):
+        self.curbs += 1
+        self.cars += 2
