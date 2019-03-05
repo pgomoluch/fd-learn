@@ -33,15 +33,16 @@ TARGET_TYPES = [float, int, int, int, int, float]
 
 POPULATION_SIZE = 120
 ELITE_SIZE = 10
-N_TEST_PROBLEMS = 10
+N_TEST_PROBLEMS = 4
 RUNS_PER_PROBLEM = 4
-MAX_PROBLEM_TIME = 5.0
+MAX_PROBLEM_TIME = 1800.0
 
 STATE_FILE_PATH = 'search_state.npz'
 GENERATE_PROBLEMS = True
 
 if GENERATE_PROBLEMS:
-    generator = TransportGenerator(4,9)
+    generator = TransportGenerator(4, 11, 30)
+    difficulty_level = -7
 
 def generate_next(params):
     param_id = random.randint(0, len(params)-1)
@@ -155,7 +156,6 @@ else:
 
 np.set_printoptions(suppress=True,precision=4)
 
-difficulty_level = 0
 while time.time() - start_time < TRAINING_TIME:
     
     print('Mean: ', mean)
@@ -187,8 +187,11 @@ while time.time() - start_time < TRAINING_TIME:
     scores = np.array(scores)
     sorted_ids = np.argsort(-scores)
     best_ids = sorted_ids[:ELITE_SIZE]
-    mean = np.mean(params[best_ids], 0)
-    cov = np.cov(params[best_ids], rowvar=False)
+    
+    # Only update the distribution if some problems have been solved
+    if scores[sorted_ids[0]] > 0.001:
+        mean = np.mean(params[best_ids], 0)
+        cov = np.cov(params[best_ids], rowvar=False)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:

@@ -10,6 +10,7 @@ CONDOR_DIR = 'condor'
 PARAMS_PATH = '../params.txt'
 THREADS = 4
 ONLINE_REFERENCE_COSTS = True
+PROBLEM_PARALLEL = True
 
 CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1
@@ -36,13 +37,36 @@ do
 done
 """
 
+DP_CONDOR_SCRIPT = """#!/bin/bash
+cd condor/$1/$2
+echo "Hello condor worker 2"
+/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $3 --heuristic "{heuristic}" --search "{search}" > fd.out
+echo "Condor worker done"
+"""
+
+DP_CONDOR_PAR_SCRIPT = """#!/bin/bash
+echo "Hello condor_par.sh"
+pwd
+cat condor/$1/problems.txt
+c=0
+while read problem; do
+    {condor_script} $1 $c $problem &
+    pid[$i]=$!
+    ((c++))
+done < condor/$1/problems.txt
+for p in ${{pid[*]}}
+do
+    wait $p
+done
+"""
+
 CONDOR_SPEC = """universe = vanilla
 executable = {condor_script}
 output = condor/$(Process)/condor.out
 error = condor/$(Process)/condor.err
 log = condor/condor.log
 arguments = $(Process)
-requirements = regexp("^sprite[0-9][0-9]", TARGET.Machine)
+requirements = regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)
 queue {population_size}
 """
 
@@ -63,8 +87,18 @@ class CondorEvaluator:
                 path = os.path.join(CONDOR_DIR, str(h), str(i))
                 if not os.path.exists(path):
                     os.makedirs(path)
-        # Condor script
+        
+        # Condor scripts
         condor_script_path = os.path.join(CONDOR_DIR, 'condor.sh')
+        condor_par_script_path = os.path.join(CONDOR_DIR, 'condor_par.sh')
+        
+        if PROBLEM_PARALLEL:
+            SCRIPT = DP_CONDOR_SCRIPT
+            PAR_SCRIPT = DP_CONDOR_PAR_SCRIPT
+        else:
+            SCRIPT = CONDOR_SCRIPT
+            PAR_SCRIPT = CONDOR_PAR_SCRIPT
+        
         condor_file = open(condor_script_path, 'w')
         condor_file.write(CONDOR_SCRIPT.format(
             fd_path=os.path.abspath('../fast-downward.py'),
@@ -74,7 +108,6 @@ class CondorEvaluator:
             search=search_str % PARAMS_PATH))
         condor_file.close()
         # Condor parallel script
-        condor_par_script_path = os.path.join(CONDOR_DIR, 'condor_par.sh')
         condor_par_file = open(condor_par_script_path, 'w')
         condor_par_file.write(CONDOR_PAR_SCRIPT.format(
             threads=THREADS,
@@ -93,9 +126,10 @@ class CondorEvaluator:
             problem_list_file.write(problem_list)
             problem_list_file.close()
         
+        spec_population_size = self._population_size if PROBLEM_PARALLEL else self._population_size // THREADS
         condor_spec = CONDOR_SPEC.format(
             condor_script=os.path.abspath('condor/condor_par.sh'),
-            population_size=self._population_size/THREADS)
+            population_size=spec_population_size)
         condor_file = open('condor/condor.cmd', 'w')
         condor_file.write(condor_spec)
         condor_file.close()
@@ -106,7 +140,7 @@ class CondorEvaluator:
         print('Waiting for condor...')
         #subprocess.check_call(['condor_wait', 'condor/condor.log'])
         # Discard the last 10% of jobs
-        subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * self._population_size/THREADS))])
+        subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * spec_population_size))])
         try:
             subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
         except:

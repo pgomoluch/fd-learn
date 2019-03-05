@@ -10,17 +10,18 @@ ipc_generator = '../../../IPC/own-transport/generator14L/three-cities-generator.
 
 class TransportGenerator:
     
-    def __init__(self, trucks, packages):
+    def __init__(self, trucks, packages, nodes=15):
         self.trucks = trucks
         self.packages = packages
+        self.nodes = nodes
         
-        self.nodes = 15
         self.size = 1000
         self.degree = 4
         self.mindistance = 100
     
     def __str__(self):
-        return 'TransportGenerator(%d trucks, %d packages)' % (self.trucks, self.packages)    
+        return 'TransportGenerator(%d trucks, %d packages, %d nodes)' % (
+            self.trucks, self.packages, self.nodes)    
     
     def generate(self, result_path = 'problem.pddl'):
         seed = time.time()
@@ -41,8 +42,10 @@ class TransportGenerator:
             self.generate(path)
     
     def easier(self):
-        if self.packages > 1:
-            self.packages -= 1
+        if self.nodes >= 10 and self.packages >= 3:
+            self.nodes -= 5
+            self.packages -= 2
     
     def harder(self):
-        self.packages += 1
+        self.nodes += 5
+        self.packages += 2
