@@ -51,7 +51,7 @@ cat condor/$1/problems.txt
 c=0
 while read problem; do
     {condor_script} $1 $c $problem &
-    pid[$i]=$!
+    pid[$c]=$!
     ((c++))
 done < condor/$1/problems.txt
 for p in ${{pid[*]}}
@@ -100,7 +100,7 @@ class CondorEvaluator:
             PAR_SCRIPT = CONDOR_PAR_SCRIPT
         
         condor_file = open(condor_script_path, 'w')
-        condor_file.write(CONDOR_SCRIPT.format(
+        condor_file.write(SCRIPT.format(
             fd_path=os.path.abspath('../fast-downward.py'),
             time_limit=int(max_problem_time),
             domain=os.path.abspath(domain_path),
@@ -109,7 +109,7 @@ class CondorEvaluator:
         condor_file.close()
         # Condor parallel script
         condor_par_file = open(condor_par_script_path, 'w')
-        condor_par_file.write(CONDOR_PAR_SCRIPT.format(
+        condor_par_file.write(PAR_SCRIPT.format(
             threads=THREADS,
             condor_script=os.path.join('.', CONDOR_DIR, 'condor.sh')))
         condor_par_file.close()
