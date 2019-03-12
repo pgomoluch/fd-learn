@@ -10,50 +10,32 @@ CONDOR_DIR = 'condor'
 PARAMS_PATH = '../params.txt'
 THREADS = 4
 ONLINE_REFERENCE_COSTS = True
-PROBLEM_PARALLEL = True
+
 
 CONDOR_SCRIPT = """#!/bin/bash
-cd condor/$1
-i=0
-while read problem; do
-    cd $i
-    /usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $problem --heuristic "{heuristic}" --search "{search}" > fd.out
-    cd ..
-    ((i++))
-done < problems.txt
-"""
-
-CONDOR_PAR_SCRIPT = """#!/bin/bash
-start=$(($1*{threads}))
-for ((i=0; i<{threads}; i++))
-do
-    {condor_script} $((start+i)) &
-    pid[$i]=$!
-done
-
-for p in ${{pid[*]}}
-do
-    wait $p
-done
-"""
-
-DP_CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1/$2
 echo "Hello condor worker 2"
 /usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $3 --heuristic "{heuristic}" --search "{search}" > fd.out
 echo "Condor worker done"
 """
 
-DP_CONDOR_PAR_SCRIPT = """#!/bin/bash
+CONDOR_PAR_SCRIPT = """#!/bin/bash
 echo "Hello condor_par.sh"
 pwd
-cat condor/$1/problems.txt
+n_batches=$(({n_problems}/{threads}))
+param_id=$(($1 / n_batches))
+batch_id=$(($1 % n_batches))
+skip=$((batch_id * {threads}))
+echo "n_batches:" $n_batches "  param_id:" $param_id "  skip:" $skip
+cat condor/problems${{batch_id}}.txt
+
 c=0
 while read problem; do
-    {condor_script} $1 $c $problem &
+    echo "Second arg: " $((skip+c))
+    {condor_script} $param_id $((skip+c)) $problem &
     pid[$c]=$!
     ((c++))
-done < condor/$1/problems.txt
+done < condor/problems${{batch_id}}.txt
 for p in ${{pid[*]}}
 do
     wait $p
@@ -62,12 +44,12 @@ done
 
 CONDOR_SPEC = """universe = vanilla
 executable = {condor_script}
-output = condor/$(Process)/condor.out
-error = condor/$(Process)/condor.err
+output = condor/condor$(Process).out
+error = condor/condor$(Process).err
 log = condor/condor.log
 arguments = $(Process)
 requirements = regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)
-queue {population_size}
+queue {n_jobs}
 """
 
 
@@ -88,29 +70,24 @@ class CondorEvaluator:
                 if not os.path.exists(path):
                     os.makedirs(path)
         
-        # Condor scripts
+        # Condor script
         condor_script_path = os.path.join(CONDOR_DIR, 'condor.sh')
         condor_par_script_path = os.path.join(CONDOR_DIR, 'condor_par.sh')
         
-        if PROBLEM_PARALLEL:
-            SCRIPT = DP_CONDOR_SCRIPT
-            PAR_SCRIPT = DP_CONDOR_PAR_SCRIPT
-        else:
-            SCRIPT = CONDOR_SCRIPT
-            PAR_SCRIPT = CONDOR_PAR_SCRIPT
-        
         condor_file = open(condor_script_path, 'w')
-        condor_file.write(SCRIPT.format(
+        condor_file.write(CONDOR_SCRIPT.format(
             fd_path=os.path.abspath('../fast-downward.py'),
             time_limit=int(max_problem_time),
             domain=os.path.abspath(domain_path),
             heuristic=heuristic_str,
             search=search_str % PARAMS_PATH))
         condor_file.close()
+        
         # Condor parallel script
         condor_par_file = open(condor_par_script_path, 'w')
-        condor_par_file.write(PAR_SCRIPT.format(
+        condor_par_file.write(CONDOR_PAR_SCRIPT.format(
             threads=THREADS,
+            n_problems=self._n_test_problems,
             condor_script=os.path.join('.', CONDOR_DIR, 'condor.sh')))
         condor_par_file.close()
         
@@ -119,17 +96,28 @@ class CondorEvaluator:
 
 
     def score_params(self, all_params, paths_and_costs, log=None):
-        problem_list = os.linesep.join([os.path.abspath(p) for (p, _) in paths_and_costs]) + os.linesep
+        problem_list = [os.path.abspath(p) for (p, _) in paths_and_costs]
         for params_id, params in enumerate(all_params):
             save_params(params, self._target_types, os.path.join(CONDOR_DIR, str(params_id), 'params.txt'))
-            problem_list_file = open(os.path.join(CONDOR_DIR, str(params_id), 'problems.txt'),'w')
-            problem_list_file.write(problem_list)
+            #problem_list_file = open(os.path.join(CONDOR_DIR, str(params_id), 'problems.txt'),'w')
+            #problem_list_file.write(problem_list)
+            #problem_list_file.close()
+        
+        assert len(problem_list) % THREADS == 0
+        
+        for i in range(len(problem_list) // THREADS):
+            batch_problem_list = []
+            for j in range(THREADS):
+                batch_problem_list.append(problem_list[i * THREADS + j])
+            problem_list_file = open(os.path.join(CONDOR_DIR, 'problems%d.txt' % i),'w')
+            problem_list_file.write(os.linesep.join(batch_problem_list)+os.linesep)
             problem_list_file.close()
         
-        spec_population_size = self._population_size if PROBLEM_PARALLEL else self._population_size // THREADS
+        n_jobs = self._population_size * len(problem_list) // THREADS
+
         condor_spec = CONDOR_SPEC.format(
             condor_script=os.path.abspath('condor/condor_par.sh'),
-            population_size=spec_population_size)
+            n_jobs=n_jobs)
         condor_file = open('condor/condor.cmd', 'w')
         condor_file.write(condor_spec)
         condor_file.close()
@@ -140,14 +128,14 @@ class CondorEvaluator:
         print('Waiting for condor...')
         #subprocess.check_call(['condor_wait', 'condor/condor.log'])
         # Discard the last 10% of jobs
-        subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * spec_population_size))])
+        subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * n_jobs))])
         try:
             subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
         except:
             print('condor_rm failed')
         elapsed_time = time.time() - start_time
         print('{} jobs ({} runs) completed in {} s.'.format(
-            self._population_size/THREADS, self._population_size * self._n_test_problems,
+            n_jobs, self._population_size * self._n_test_problems,
             round(elapsed_time,2)))
         if log:
             log.write(str(round(elapsed_time,2)) + '\n')
