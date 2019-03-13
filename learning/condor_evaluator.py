@@ -10,6 +10,7 @@ CONDOR_DIR = 'condor'
 PARAMS_PATH = '../params.txt'
 THREADS = 4
 ONLINE_REFERENCE_COSTS = True
+RETRY_DELAY = 1800
 
 
 CONDOR_SCRIPT = """#!/bin/bash
@@ -122,13 +123,13 @@ class CondorEvaluator:
         condor_file.write(condor_spec)
         condor_file.close()
         start_time = time.time()
-        submit_output = subprocess.check_output(['condor_submit', 'condor/condor.cmd']).decode('utf-8')
+        submit_output = CondorEvaluator._check_output_retry(['condor_submit', 'condor/condor.cmd'], RETRY_DELAY).decode('utf-8')
         cluster_id = CondorEvaluator._get_condor_cluster(submit_output)
         
         print('Waiting for condor...')
         #subprocess.check_call(['condor_wait', 'condor/condor.log'])
         # Discard the last 10% of jobs
-        subprocess.check_call(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * n_jobs))])
+        CondorEvaluator._check_call_retry(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * n_jobs))], RETRY_DELAY)
         try:
             subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
         except:
@@ -203,4 +204,28 @@ class CondorEvaluator:
         space = submit_output.rfind(' ')
         dot = submit_output.rfind('.')
         return int(submit_output[space+1 : dot])
+    
+    @staticmethod
+    def _check_call_retry(command, delay):
+        while True:
+            try:
+                subprocess.check_call(command)
+                return
+            except subprocess.CalledProcessError as e:
+                print('check_call failed')
+                print(e)
+                time.sleep(delay)
+                print('retrying...')
+
+    @staticmethod
+    def _check_output_retry(command, delay):
+        while True:
+            try:
+                return subprocess.check_output(command)
+            except subprocess.CalledProcessErroras as e:
+                print('check_output failed')
+                print(e)
+                time.sleep(delay)
+                print('retrying...') 
+                        
 
