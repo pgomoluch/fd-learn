@@ -16,7 +16,7 @@ RETRY_DELAY = 1800
 CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1/$2
 echo "Hello condor worker 2"
-/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} {domain} $3 --heuristic "{heuristic}" --search "{search}" > fd.out
+/usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} --overall-memory-limit 4G {domain} $3 --heuristic "{heuristic}" --search "{search}" > fd.out
 echo "Condor worker done"
 """
 
@@ -222,7 +222,7 @@ class CondorEvaluator:
         while True:
             try:
                 return subprocess.check_output(command)
-            except subprocess.CalledProcessErroras as e:
+            except subprocess.CalledProcessError as e:
                 print('check_output failed')
                 print(e)
                 time.sleep(delay)
