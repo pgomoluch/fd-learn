@@ -8,7 +8,7 @@ ipc_generator2 = '../../../IPC/own-elevators/generator/generate_pddl {floors} {f
 class ElevatorsGenerator:
 
     SLOW_CAPACITY = 4
-    FAST_CAPACITY = 4
+    FAST_CAPACITY = 6
 
     def __init__(self, passengers, floors, area_size, n_fast, n_slow):
         self.params = {'passengers': passengers, 'floors': floors,
@@ -36,7 +36,7 @@ class ElevatorsGenerator:
     
     def easier(self):
         if self.params['passengers'] > 1:
-            self.params['passengers'] -= 1
+            self.params['passengers'] -= 5
 
     def harder(self):
-        self.params['passengers'] += 1
+        self.params['passengers'] += 5

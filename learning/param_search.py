@@ -13,6 +13,9 @@ from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
 from condor_evaluator import CondorEvaluator
 
 from problem_generators.transport_generator import TransportGenerator
+from problem_generators.parking_generator import ParkingGenerator
+from problem_generators.elevators_generator import ElevatorsGenerator
+from problem_generators.nomystery_generator import NomysteryGenerator
 
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
@@ -43,6 +46,12 @@ GENERATE_PROBLEMS = True
 if GENERATE_PROBLEMS:
     generator = TransportGenerator(4, 11, 30)
     difficulty_level = -7
+    # generator = ParkingGenerator(21, 40)
+    # difficulty_level = 0
+    # generator = ElevatorsGenerator(60, 40, 10, 4, 1)
+    # difficulty_level = 0
+    # generator = NomysteryGenerator(15, 15, 1.5)
+    # difficulty_level = 0
 
 def generate_next(params):
     param_id = random.randint(0, len(params)-1)
@@ -79,10 +88,13 @@ def get_problem():
             get_problem.problem_set = []
             for p in problems:
                 costs_path = p.replace('.pddl', 'costs.txt')
-                costs = ast.literal_eval(open(costs_path).read())
-                costs = list(filter(lambda x: x >= 0, costs.values()))
-                if len(costs) > 0:
-                    c = min(costs)
+                if os.path.exists(costs_path):
+                    costs = ast.literal_eval(open(costs_path).read())
+                    costs = list(filter(lambda x: x >= 0, costs.values()))
+                    if len(costs) > 0:
+                        c = min(costs)
+                    else:
+                        c = -1
                 else:
                     c = -1
                 get_problem.problem_set.append((p,c))
