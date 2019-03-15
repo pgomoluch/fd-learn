@@ -165,9 +165,15 @@ class CondorEvaluator:
                 except:
                     pass
                 iteration_costs[params_id, problem_id] = plan_cost
+        if log:
+            log.write('Iteration costs:\n')
+            for row in iteration_costs:
+                for entry in row:
+                    log.write('%6d' % entry)
+                log.write('\n')
+            log.write('\n')
         if ONLINE_REFERENCE_COSTS:
             # Update the reference costs using the costs from this iteration
-            print(iteration_costs)
             reference_costs = []
             for (_, old_ref), costs in zip(paths_and_costs, iteration_costs.T):
                 actual_costs = [c for c in costs if c > 0.0] 
@@ -181,7 +187,11 @@ class CondorEvaluator:
                 reference_costs.append(new_ref)
         else:
             (_, reference_costs) = paths_and_costs 
-        print(reference_costs)       
+        if log:
+            log.write('Reference costs:\n')
+            for entry in reference_costs:
+                log.write('%6d' % entry)
+            log.write('\n\n')
         
         # Compute the scores
         total_scores = []

@@ -34,14 +34,15 @@ MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf'), float('inf'), 1.0]
 
 TARGET_TYPES = [float, int, int, int, int, float]
 
-POPULATION_SIZE = 120
+POPULATION_SIZE = 50
 ELITE_SIZE = 10
-N_TEST_PROBLEMS = 4
+N_TEST_PROBLEMS = 20
 RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 1800.0
 
 STATE_FILE_PATH = 'search_state.npz'
-GENERATE_PROBLEMS = True
+ALL_PROBLEMS = True
+GENERATE_PROBLEMS = False
 
 if GENERATE_PROBLEMS:
     generator = TransportGenerator(4, 11, 30)
@@ -106,6 +107,10 @@ def get_problem():
 get_problem.problem_set = None
 get_problem.costs = None
 
+def get_all_problems():
+    problems = glob.glob(PROBLEM_DIR + '/p*.pddl')
+    return [ (p, -1) for p in problems ]
+
 def score_params(params, paths_and_costs):
     save_params(params, PARAMS_PATH)
     total_score = 0.0
@@ -168,20 +173,30 @@ else:
 
 np.set_printoptions(suppress=True,precision=4)
 
+kinit_time = 0
+
 while time.time() - start_time < TRAINING_TIME:
+    
+    # Renew Kerberos ticket
+    if time.time() - kinit_time > 5 * 3600:
+        subprocess.Popen("cat pass.txt | kinit", shell=True)
+        kinit_time = time.time()
     
     print('Mean: ', mean)
     print('Covariance:\n', cov)
     
     # Choose the test problems
-    paths_and_costs = []
-    for i in range(N_TEST_PROBLEMS):
-        if GENERATE_PROBLEMS:
-            problem_path = 'tmp-problems/p' + str(i) + '.pddl'
-            generator.generate(problem_path)
-            paths_and_costs.append((problem_path, -1))
-        else:
-            paths_and_costs.append(get_problem())
+    if ALL_PROBLEMS:
+        paths_and_costs = get_all_problems()
+    else:
+        paths_and_costs = []
+        for i in range(N_TEST_PROBLEMS):
+            if GENERATE_PROBLEMS:
+                problem_path = 'tmp-problems/p' + str(i) + '.pddl'
+                generator.generate(problem_path)
+                paths_and_costs.append((problem_path, -1))
+            else:
+                paths_and_costs.append(get_problem())
     
     # Generate parameters
     params = np.random.multivariate_normal(mean, cov, POPULATION_SIZE)
