@@ -17,22 +17,18 @@ from problem_generators.parking_generator import ParkingGenerator
 from problem_generators.elevators_generator import ElevatorsGenerator
 from problem_generators.nomystery_generator import NomysteryGenerator
 
+from parameter_handlers.direct_parameter_handler import DirectParameterHandler
+
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
+
+param_handler = DirectParameterHandler()
 
 # Random walk optimization
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]
 UNITS = [0.05, 1, 0.05, 5]
-
-# Cross-entropy Method
-# [epsilon, stall_size, number of random walks, random_walk_length, cycle_length, fraction_local]
-INITIAL_MEAN = [0.5, 10.0, 5.0, 10.0, 200.0, 0.5]
-INITIAL_STDDEV = [0.5, 10.0, 5.0, 10.0, 200.0, 0.5]
-
-MIN_PARAMS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-MAX_PARAMS = [1.0, float('inf'), float('inf'), float('inf'), float('inf'), 1.0]
-
-TARGET_TYPES = [float, int, int, int, int, float]
+MIN_PARAMS = [0.0, 0.0, 0.0, 0.0]
+MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 
 POPULATION_SIZE = 50
 ELITE_SIZE = 10
@@ -67,13 +63,6 @@ def generate_next(params):
             result = params.copy()
             result[param_id] = value
             return result
-
-def bound_params(params):
-    for i in range(len(params)):
-        if params[i] < MIN_PARAMS[i]:
-            params[i] = MIN_PARAMS[i]
-        elif params[i] > MAX_PARAMS[i]:
-            params[i] = MAX_PARAMS[i]
 
 def get_problem():
     if get_problem.problem_set is None:
@@ -112,7 +101,7 @@ def get_all_problems():
     return [ (p, -1) for p in problems ]
 
 def score_params(params, paths_and_costs):
-    save_params(params, PARAMS_PATH)
+    param_handler.save_params(params, PARAMS_PATH)
     total_score = 0.0
     for problem_path, reference_cost in paths_and_costs:
         for i in range(RUNS_PER_PROBLEM):
@@ -153,13 +142,13 @@ params_log = open('params_log.txt', 'w')
 condor_log = open('condor_log.txt', 'w')
 
 evaluator = CondorEvaluator(
-    target_types = TARGET_TYPES,
     population_size = POPULATION_SIZE,
     n_test_problems = N_TEST_PROBLEMS,
     domain_path = DOMAIN,
     heuristic_str = HEURISTIC,
     search_str = SEARCH,
-    max_problem_time = MAX_PROBLEM_TIME)
+    max_problem_time = MAX_PROBLEM_TIME,
+    param_handler = param_handler)
 
 if continuing:
     state_file = open(STATE_FILE_PATH, 'rb')
@@ -168,8 +157,8 @@ if continuing:
     cov = npz_content['cov']
     state_file.close()
 else:
-    mean = np.array(INITIAL_MEAN)
-    cov = np.diag(np.square(INITIAL_STDDEV))
+    mean = np.array(param_handler.initial_mean)
+    cov = np.diag(np.square(param_handler.initial_stddev))
 
 np.set_printoptions(suppress=True,precision=4)
 
@@ -201,7 +190,7 @@ while time.time() - start_time < TRAINING_TIME:
     # Generate parameters
     params = np.random.multivariate_normal(mean, cov, POPULATION_SIZE)
     for row in params:
-        bound_params(row)
+        param_handler.bound_params(row)
     # For debugging: fix the parameters
     #params = np.concatenate((
     #    np.tile(np.array([[0.2,0,1000,0.0]]), (POPULATION_SIZE//2, 1)),
@@ -228,7 +217,7 @@ while time.time() - start_time < TRAINING_TIME:
     params_log.write(str(mean) + '\n' + str(cov) + '\n\n')
     params_log.flush()
     
-    save_params(mean, TARGET_TYPES, 'params.txt')
+    param_handler.save_params(mean, 'params.txt')
     state_file = open(STATE_FILE_PATH, 'wb')
     np.savez(state_file, mean=mean, cov=cov)
     state_file.close()

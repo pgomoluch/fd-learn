@@ -56,12 +56,12 @@ queue {n_jobs}
 
 class CondorEvaluator:
 
-    def __init__(self, target_types, population_size, n_test_problems,
-        domain_path, heuristic_str, search_str, max_problem_time):
+    def __init__(self, population_size, n_test_problems, domain_path,
+        heuristic_str, search_str, max_problem_time, param_handler):
     
-        self._target_types = target_types
         self._population_size = population_size
         self._n_test_problems = n_test_problems
+        self._param_handler = param_handler
     
         if not os.path.exists(CONDOR_DIR):
             os.makedirs(CONDOR_DIR)
@@ -99,7 +99,7 @@ class CondorEvaluator:
     def score_params(self, all_params, paths_and_costs, log=None):
         problem_list = [os.path.abspath(p) for (p, _) in paths_and_costs]
         for params_id, params in enumerate(all_params):
-            save_params(params, self._target_types, os.path.join(CONDOR_DIR, str(params_id), 'params.txt'))
+            self._param_handler.save_params(params, os.path.join(CONDOR_DIR, str(params_id), 'params.txt'))
             #problem_list_file = open(os.path.join(CONDOR_DIR, str(params_id), 'problems.txt'),'w')
             #problem_list_file.write(problem_list)
             #problem_list_file.close()
