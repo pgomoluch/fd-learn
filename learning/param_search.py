@@ -18,11 +18,13 @@ from problem_generators.elevators_generator import ElevatorsGenerator
 from problem_generators.nomystery_generator import NomysteryGenerator
 
 from parameter_handlers.direct_parameter_handler import DirectParameterHandler
+from parameter_handlers.neural_parameter_handler import NeuralParameterHandler
 
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s)'
 
-param_handler = DirectParameterHandler()
+#param_handler = DirectParameterHandler()
+param_handler = NeuralParameterHandler()
 
 # Random walk optimization
 INITIAL_PARAMS = [0.2, 5, 0.5, 20]

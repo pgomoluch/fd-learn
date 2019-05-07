@@ -7,6 +7,8 @@
 #include "../open_lists/ra_alternation_open_list.h"
 #include "../open_lists/simple_random_access_open_list.h"
 
+#include <network.h>
+
 #include <chrono>
 #include <deque>
 #include <random>
@@ -24,6 +26,7 @@ using RandomAccessStateOpenList = RandomAccessOpenList<StateOpenListEntry>;
 using SimpleRandomAccessStateOpenList = SimpleRandomAccessOpenList<StateOpenListEntry>;
 
 class ParametrizedSearch : public SearchEngine {
+    const bool neural_parametrized = true;
     const bool reopen_closed_nodes;
     
     double EPSILON = 0.5;
@@ -32,6 +35,7 @@ class ParametrizedSearch : public SearchEngine {
     unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
     unsigned STALL_SIZE = 10;
+    std::unique_ptr<Network> nn;
 
     const std::vector<unsigned> STATE_SPACE = {2,2};
 
@@ -64,12 +68,13 @@ class ParametrizedSearch : public SearchEngine {
 
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
-    std::vector<unsigned> get_state_features();
+    std::vector<double> get_state_features();
     unsigned get_state_id();
     unsigned compute_n_states();
     
     void merge_local_list();
     void restart_local_list();
+    void update_search_parameters();
     
     // Gets one state from the queue and expands it. Sets state id, applicable and preferred operators,
     // which can be useful e.g. to perform a random walk from the expanded state.

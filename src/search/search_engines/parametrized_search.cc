@@ -10,6 +10,7 @@
 #include "../open_lists/ra_alternation_open_list.h"
 #include "../utils/memory.h"
 
+#include <cmath>
 #include <iomanip>
 
 using namespace std;
@@ -62,28 +63,32 @@ void ParametrizedSearch::initialize() {
     heuristics.assign(hset.begin(), hset.end());
     assert(!heuristics.empty());
 
-    ifstream params_file(params_path);
-    if(params_file) {
-        params_file >> EPSILON;
-        params_file >> STALL_SIZE;
-        params_file >> N_ROLLOUTS;
-        params_file >> ROLLOUT_LENGTH;
+    if (neural_parametrized) {
+        nn = unique_ptr<Network>(new Network(params_path.c_str(), true));
+    } else {
+        ifstream params_file(params_path);
+        if(params_file) {
+            params_file >> EPSILON;
+            params_file >> STALL_SIZE;
+            params_file >> N_ROLLOUTS;
+            params_file >> ROLLOUT_LENGTH;
 
-        unsigned cycle_length;
-        double percentage_local;
-        params_file >> cycle_length;
-        params_file >> percentage_local;
-        // cycle_length == GLOBAL_EXP_LIMIT + LOCAL_EXP_LIMIT
-        GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
-        LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;
+            unsigned cycle_length;
+            double percentage_local;
+            params_file >> cycle_length;
+            params_file >> percentage_local;
+            // cycle_length == GLOBAL_EXP_LIMIT + LOCAL_EXP_LIMIT
+            GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
+            LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;
 
-        params_file.close();
+            params_file.close();
+        }
+        cout << "\nepsilon = " << EPSILON;
+        cout << "\nrollout_length = " << ROLLOUT_LENGTH;
+        cout << "\nglobal_exp_limit = " << GLOBAL_EXP_LIMIT;
+        cout << "\nlocal_exp_limit = " << LOCAL_EXP_LIMIT;
+        cout << endl;
     }
-    cout << "\nepsilon = " << EPSILON;
-    cout << "\nrollout_length = " << ROLLOUT_LENGTH;
-    cout << "\nglobal_exp_limit = " << GLOBAL_EXP_LIMIT;
-    cout << "\nlocal_exp_limit = " << LOCAL_EXP_LIMIT;
-    cout << endl;
 
     const GlobalState &initial_state = state_registry.get_initial_state();
     for (Heuristic *h: heuristics) {
@@ -106,7 +111,10 @@ void ParametrizedSearch::initialize() {
         initial_h = all_time_best_h = best_h = previous_best_h = h;
         open_list->insert(eval_context, initial_state.get_id());
     }
-    cout << open_list->empty();
+
+    if (neural_parametrized)
+        update_search_parameters();
+
 }
 
 void ParametrizedSearch::print_statistics() const {
@@ -120,6 +128,7 @@ SearchStatus ParametrizedSearch::step() {
         merge_local_list();
         open_list = global_open_list.get();
         exp_since_switch = 0;
+        update_search_parameters();
     } else if (open_list == global_open_list.get() && exp_since_switch >= GLOBAL_EXP_LIMIT) {
         restart_local_list();
         open_list = local_open_list.get();
@@ -150,12 +159,12 @@ SearchStatus ParametrizedSearch::step() {
     if (applicable_ops.size() == 0 || expansions_without_progress < STALL_SIZE)
         return IN_PROGRESS;
     for (unsigned i = 0; i < N_ROLLOUTS; ++i) {
-        learning_log << i << ' ';
+        //learning_log << i << ' ';
         random_walk(state_id, preferred_operators);
         if (expansions_without_progress == 0)
             break;
     }
-    learning_log << "\n";
+    //learning_log << "\n";
     return IN_PROGRESS;
 }
 
@@ -280,23 +289,41 @@ StateID ParametrizedSearch::get_random_state() {
     return open_list->remove_random();
 }
 
-vector<unsigned> ParametrizedSearch::get_state_features() {
-    vector<unsigned> result;
-    result.push_back(best_h > initial_h /2);
-    result.push_back(
-        duration_cast<milliseconds>(steady_clock::now()-search_start).count() > ref_time);
+vector<double> ParametrizedSearch::get_state_features() {
+    vector<double> result;
+    result.push_back((double) initial_h);
+    result.push_back((double) best_h);
+    result.push_back((double)
+        duration_cast<seconds>(steady_clock::now()-search_start).count());
+    // result.push_back(
+    //    duration_cast<milliseconds>(steady_clock::now()-search_start).count() > ref_time);
     return result;
 }
 
-unsigned ParametrizedSearch::get_state_id() {
+void ParametrizedSearch::update_search_parameters()
+{
     auto features = get_state_features();
-    unsigned result = 0;
-    unsigned weight = 1;
-    for (int i = features.size()-1; i >= 0; --i) {
-        result += weight * features[i];
-        weight *= STATE_SPACE[i];
-    }
-    return result;
+    Matrix result(6, 1);
+    nn->evaluate(features, result);
+    
+    auto sigma = [](double x) { return 1.0 / (1.0 + exp(-x)); };
+    auto nonneg = [](double x) { return x < 0.0 ? 0.0 : x; };
+
+    EPSILON = sigma(result.at(0, 0));
+    STALL_SIZE = nonneg(result.at(1, 0));
+    N_ROLLOUTS = nonneg(result.at(2, 0));
+    ROLLOUT_LENGTH = nonneg(result.at(3, 0));
+    
+    double cycle_length = nonneg(result.at(4, 0));
+    double percentage_local = sigma(result.at(5, 0));
+    GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
+    LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;
+
+    for (auto f: features)
+        learning_log << f << " ";
+    learning_log << endl;
+    learning_log << EPSILON << " " << STALL_SIZE << " " << N_ROLLOUTS << " "
+        << ROLLOUT_LENGTH << " " << GLOBAL_EXP_LIMIT << " " << LOCAL_EXP_LIMIT << endl << endl; 
 }
 
 EvaluationContext ParametrizedSearch::process_state(const SearchNode &node, const GlobalState &state,
