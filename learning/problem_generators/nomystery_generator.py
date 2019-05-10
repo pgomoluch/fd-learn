@@ -2,9 +2,11 @@ import os
 import time
 import subprocess
 
+from .base_generator import BaseGenerator
+
 ipc_generator = '../../../IPC/own-no-mystery/generator/nomystery -l %d -p %d -c %d -s %d'
 
-class NomysteryGenerator:
+class NomysteryGenerator(BaseGenerator):
 
     def __init__(self, locations, packages, constraint):
         self.locations = locations
@@ -25,15 +27,16 @@ class NomysteryGenerator:
         problem_file.close()
         self.counter += 1
     
-    def generate_batch(self, n, base_path = 'problem'):
-        for i in range(1, n+1):
-            path = base_path + str(i) + '.pddl'
-            self.generate(path)
-    
     def easier(self):
         if self.packages > 1:
             self.packages -= 1
     
     def harder(self):
         self.packages += 1
-            
+    
+    conf = {
+        'ipc2011': ((6,6,1.5), (7,7,1.5), (8,8,1.5), (9,9,1.5), (10,10,1.5),
+            (11,11,1.5), (12,12,1.5), (13,13,1.5), (14,14,1.5), (15,15,1.5),
+            (6,6,1.1), (7,7,1.1), (8,8,1.1), (9,9,1.1), (10,10,1.1),
+            (11,11,1.1), (12,12,1.1), (13,13,1.1), (14,14,1.1), (15,15,1.1))
+    }

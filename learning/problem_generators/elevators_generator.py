@@ -2,19 +2,18 @@ import os
 import time
 import subprocess
 
+from .base_generator import BaseGenerator
+
 ipc_generator1 = '../../../IPC/own-elevators/generator/generate_elevators {passengers} {passengers} 1 1 1 {floors} {area_size} {n_fast} {n_slow} {fast_capacity} {slow_capacity}'
 ipc_generator2 = '../../../IPC/own-elevators/generator/generate_pddl {floors} {floors} 1 {passengers} {passengers} 1 1 1'
 
-class ElevatorsGenerator:
+class ElevatorsGenerator(BaseGenerator):
 
-    SLOW_CAPACITY = 4
-    FAST_CAPACITY = 6
-
-    def __init__(self, passengers, floors, area_size, n_fast, n_slow):
+    def __init__(self, passengers, floors, area_size, n_fast, n_slow, fast_cap=6, slow_cap=4):
         self.params = {'passengers': passengers, 'floors': floors,
             'area_size': area_size, 'n_fast': n_fast, 'n_slow': n_slow,
-            'slow_capacity': self.SLOW_CAPACITY,
-            'fast_capacity': self.FAST_CAPACITY}
+            'slow_capacity': slow_cap,
+            'fast_capacity': fast_cap}
     
     def __str__(self):
         return 'ElevatorsGenerator' + str(self.params)
@@ -40,3 +39,13 @@ class ElevatorsGenerator:
 
     def harder(self):
         self.params['passengers'] += 5
+    
+    conf = {
+        'ipc2011': ((14,16,8,2,1,4,3), (21,24,8,2,1,6,4), (27,24,8,2,1,6,4),
+            (26,16,8,2,1,4,3), (22,16,8,2,1,4,3), (30,24,8,2,1,6,4),
+            (24,24,8,2,1,6,4), (33,24,8,2,1,6,4), (36,24,8,2,1,6,4),
+            (39,24,8,2,1,6,4), (40,24,6,4,1,6,4), (43,24,6,4,1,6,4),
+            (46,24,6,4,1,6,4), (49,24,6,4,1,6,4), (52,24,6,4,1,6,4),
+            (40,40,10,4,1,6,4), (45,40,10,4,1,6,4), (50,40,10,4,1,6,4),
+            (55,40,10,4,1,6,4), (60,40,10,4,1,6,4))
+    }

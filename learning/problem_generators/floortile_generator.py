@@ -2,9 +2,11 @@ import os
 import time
 import subprocess
 
+from .base_generator import BaseGenerator
+
 ipc_generator = '../../../IPC/own-floortile/floortile-generator.py'
 
-class FloortileGenerator:
+class FloortileGenerator(BaseGenerator):
 
     def __init__(self, rows, columns, robots):
         self.rows = rows
@@ -23,11 +25,6 @@ class FloortileGenerator:
         problem_file.write(problem)
         problem_file.close()
     
-    def generate_batch(self, n, base_path = 'problem'):
-        for i in range(1, n+1):
-            path = base_path + str(i) + '.pddl'
-            self.generate(path)
-    
     def easier(self):
         if self.rows > self.columns + 1:
             self.rows -= 1
@@ -39,3 +36,10 @@ class FloortileGenerator:
             self.columns += 1
         else:
             self.rows += 1
+    
+    conf = {
+        'ipc2011': ((5,3,2), (5,3,2), (6,3,2), (6,3,2), (5,4,2), (5,4,2),
+            (6,4,2), (6,4,2), (7,4,2), (7,4,2), (6,5,2), (6,5,2),
+            (7,5,3), (7,5,3), (7,6,3), (7,6,3), (8,6,3), (8,6,3),
+            (8,7,3), (8,7,3))
+    }

@@ -2,9 +2,11 @@ import os
 import time
 import subprocess
 
+from .base_generator import BaseGenerator
+
 ipc_generator = '../../../IPC/own-parking/parking-generator.pl'
 
-class ParkingGenerator:
+class ParkingGenerator(BaseGenerator):
     
     def __init__(self, curbs, cars):
         self.curbs = curbs
@@ -21,11 +23,6 @@ class ParkingGenerator:
         problem_file.write(problem)
         problem_file.close()
     
-    def generate_batch(self, n, base_path = 'problem'):
-        for i in range(1, n+1):
-            path = base_path + str(i) + '.pddl'
-            self.generate(path)
-    
     def easier(self):
         if self.curbs > 3:
             self.curbs -= 1
@@ -34,3 +31,10 @@ class ParkingGenerator:
     def harder(self):
         self.curbs += 1
         self.cars += 2
+    
+    conf = {
+        'ipc2014': ((15,28), (15,28), (16,30), (16,30), (16,30),
+            (17,32), (17,32), (17,32), (18,34), (18,34), (18,34),
+            (19,36), (19,36), (19,36), (20,38), (20,38), (20,38),
+            (21,40), (21,40), (21,40))
+    }
