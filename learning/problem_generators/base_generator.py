@@ -11,4 +11,4 @@ class BaseGenerator:
     def generate_series(cls, key, directory):
         for i, c in enumerate(cls.conf[key]):
             generator = cls(*c)
-            generator.generate(os.path.join(directory, '{:02d}.pddl'.format(i+1)))
+            generator.generate(os.path.join(directory, 'p{:02d}.pddl'.format(i+1)))

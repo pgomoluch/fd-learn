@@ -40,11 +40,13 @@ MAX_PROBLEM_TIME = 1800.0
 
 STATE_FILE_PATH = 'search_state.npz'
 ALL_PROBLEMS = True
-GENERATE_PROBLEMS = False
+GENERATE_PROBLEMS = True
 
 if GENERATE_PROBLEMS:
-    generator = TransportGenerator(4, 11, 30)
-    difficulty_level = -7
+    generator_class = TransportGenerator
+    generator_key = 'ipc2011'
+    # generator = TransportGenerator(4, 11, 30)
+    # difficulty_level = -7
     # generator = ParkingGenerator(21, 40)
     # difficulty_level = 0
     # generator = ElevatorsGenerator(60, 40, 10, 4, 1)
@@ -100,6 +102,7 @@ get_problem.costs = None
 
 def get_all_problems():
     problems = glob.glob(PROBLEM_DIR + '/p*.pddl')
+    problems.sort()
     return [ (p, -1) for p in problems ]
 
 def score_params(params, paths_and_costs):
@@ -178,6 +181,8 @@ while time.time() - start_time < TRAINING_TIME:
     
     # Choose the test problems
     if ALL_PROBLEMS:
+        if GENERATE_PROBLEMS:
+            generator_class.generate_series(generator_key, PROBLEM_DIR)
         paths_and_costs = get_all_problems()
     else:
         paths_and_costs = []
