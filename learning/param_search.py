@@ -229,7 +229,7 @@ while time.time() - start_time < TRAINING_TIME:
     np.savez(state_file, mean=mean, cov=cov)
     state_file.close()
     
-    if GENERATE_PROBLEMS:
+    if GENERATE_PROBLEMS and not ALL_PROBLEMS:
         # Adjust problem difficulty based on current scores
         if scores[sorted_ids[POPULATION_SIZE // 2]] < 0.001:
             print('Decreasing problem difficulty...')

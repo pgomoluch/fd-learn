@@ -295,6 +295,7 @@ vector<double> ParametrizedSearch::get_state_features() {
     result.push_back((double) best_h);
     result.push_back((double)
         duration_cast<seconds>(steady_clock::now()-search_start).count());
+    result.push_back((double) expansions_without_progress);
     // result.push_back(
     //    duration_cast<milliseconds>(steady_clock::now()-search_start).count() > ref_time);
     return result;
