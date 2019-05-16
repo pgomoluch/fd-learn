@@ -16,6 +16,7 @@ from problem_generators.transport_generator import TransportGenerator
 from problem_generators.parking_generator import ParkingGenerator
 from problem_generators.elevators_generator import ElevatorsGenerator
 from problem_generators.nomystery_generator import NomysteryGenerator
+from problem_generators.floortile_generator import FloortileGenerator
 
 from parameter_handlers.direct_parameter_handler import DirectParameterHandler
 from parameter_handlers.neural_parameter_handler import NeuralParameterHandler
@@ -41,6 +42,7 @@ MAX_PROBLEM_TIME = 1800.0
 STATE_FILE_PATH = 'search_state.npz'
 ALL_PROBLEMS = True
 GENERATE_PROBLEMS = True
+PARAMS_DIR = 'params'
 
 if GENERATE_PROBLEMS:
     generator_class = TransportGenerator
@@ -168,7 +170,7 @@ else:
 np.set_printoptions(suppress=True,precision=4)
 
 kinit_time = 0
-
+iteration = 0
 while time.time() - start_time < TRAINING_TIME:
     
     # Renew Kerberos ticket
@@ -225,6 +227,8 @@ while time.time() - start_time < TRAINING_TIME:
     params_log.flush()
     
     param_handler.save_params(mean, 'params.txt')
+    if PARAMS_DIR:
+        param_handler.save_params(mean, os.path.join(PARAMS_DIR, 'params%d.txt' % iteration))
     state_file = open(STATE_FILE_PATH, 'wb')
     np.savez(state_file, mean=mean, cov=cov)
     state_file.close()
@@ -240,6 +244,8 @@ while time.time() - start_time < TRAINING_TIME:
             generator.harder()
             difficulty_level += 1
         print(generator)
+    
+    iteration += 1
     
 params_log.close()
 condor_log.close()
