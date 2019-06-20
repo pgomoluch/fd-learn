@@ -38,6 +38,7 @@ ELITE_SIZE = 10
 N_TEST_PROBLEMS = 20
 RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 1800.0
+ALPHA = 0.7
 
 STATE_FILE_PATH = 'search_state.npz'
 ALL_PROBLEMS = True
@@ -215,8 +216,8 @@ while time.time() - start_time < TRAINING_TIME:
     
     # Only update the distribution if some problems have been solved
     if scores[sorted_ids[0]] > 0.001:
-        mean = np.mean(params[best_ids], 0)
-        cov = np.cov(params[best_ids], rowvar=False)
+        mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
+        cov = (1-ALPHA) * cov + ALPHA * np.cov(params[best_ids], rowvar=False)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:

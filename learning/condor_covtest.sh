@@ -50,6 +50,7 @@ printf "$CONDOR_SPEC" > ${COVTEST_DIR}/condor.cmd
 
 condor_submit ${COVTEST_DIR}/condor.cmd
 condor_wait ${COVTEST_DIR}/condor.log
+rm ${COVTEST_DIR}/condor.log # a workaround for the new version of Condor
 
 results=()
 n_states=()
