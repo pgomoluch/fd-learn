@@ -3,8 +3,8 @@ import numpy as np
 import subprocess
 import time
 
-from rl_common import get_cost, compute_ipc_reward, save_params
-
+from rl_common import get_cost, save_params
+from .base_evaluator import BaseEvaluator
 
 CONDOR_DIR = 'condor'
 PARAMS_PATH = '../params.txt'
@@ -53,15 +53,15 @@ requirements = regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)
 queue {n_jobs}
 """
 
+### requirements = (regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)) && (Machine != "point42.doc.ic.ac.uk") && (Machine != "sprite14.doc.ic.ac.uk")
 
-class CondorEvaluator:
+class CondorEvaluator(BaseEvaluator):
 
     def __init__(self, population_size, n_test_problems, domain_path,
         heuristic_str, search_str, max_problem_time, param_handler):
     
-        self._population_size = population_size
-        self._n_test_problems = n_test_problems
-        self._param_handler = param_handler
+        super().__init__(population_size, n_test_problems, domain_path,
+            heuristic_str, search_str, max_problem_time, param_handler)
     
         if not os.path.exists(CONDOR_DIR):
             os.makedirs(CONDOR_DIR)
@@ -127,13 +127,14 @@ class CondorEvaluator:
         cluster_id = CondorEvaluator._get_condor_cluster(submit_output)
         
         print('Waiting for condor...')
-        #subprocess.check_call(['condor_wait', 'condor/condor.log'])
+        subprocess.check_call(['condor_wait', 'condor/condor.log'])
         # Discard the last 10% of jobs
-        CondorEvaluator._check_call_retry(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * n_jobs))], RETRY_DELAY)
-        try:
-            subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
-        except:
-            print('condor_rm failed')
+        #CondorEvaluator._check_call_retry(['condor_wait', 'condor/condor.log', str(cluster_id), '-num', str(int(0.9 * n_jobs))], RETRY_DELAY)
+        #try:
+        #    subprocess.check_call(['condor_rm', 'cluster', str(cluster_id)])
+        #except:
+        #    print('condor_rm failed')
+        os.remove('condor/condor.log') # a workaround for the new version of Condor
         elapsed_time = time.time() - start_time
         print('{} jobs ({} runs) completed in {} s.'.format(
             n_jobs, self._population_size * self._n_test_problems,
@@ -165,6 +166,8 @@ class CondorEvaluator:
                 except:
                     pass
                 iteration_costs[params_id, problem_id] = plan_cost
+        
+        
         if log:
             log.write('Iteration costs:\n')
             for row in iteration_costs:
@@ -172,41 +175,27 @@ class CondorEvaluator:
                     log.write('%6d' % entry)
                 log.write('\n')
             log.write('\n')
-        if ONLINE_REFERENCE_COSTS:
-            # Update the reference costs using the costs from this iteration
-            reference_costs = []
-            for (_, old_ref), costs in zip(paths_and_costs, iteration_costs.T):
-                actual_costs = [c for c in costs if c > 0.0] 
-                if actual_costs:
-                    if old_ref > 0.0:
-                        new_ref = min(old_ref, min(actual_costs))
-                    else:
-                        new_ref = min(actual_costs)
-                else:
-                    new_ref = old_ref
-                reference_costs.append(new_ref)
-        else:
-            (_, reference_costs) = paths_and_costs 
+        
+        
+        if ONLINE_REFERENCE_COSTS:    
+            old_costs = [ c for (_, c) in paths_and_costs ]
+            reference_costs = self.get_online_reference_costs(old_costs, iteration_costs)
+        else:    
+            (_, reference_costs) = paths_and_costs
+        
+        
         if log:
             log.write('Reference costs:\n')
             for entry in reference_costs:
                 log.write('%6d' % entry)
             log.write('\n\n')
         
-        # Compute the scores
-        total_scores = []
-        for params_id in range(self._population_size):
-            total_score = 0.0
-            for problem_id, ref_cost in enumerate(reference_costs):
-                try:
-                    reward = compute_ipc_reward(iteration_costs[params_id, problem_id], ref_cost)
-                except:
-                    reward = 0.0
-                total_score += reward
-            total_scores.append(total_score)
+        
+        total_scores = self.compute_total_scores(iteration_costs, reference_costs)
         
         print('Aggregation of the results took {} s.'.format(round(time.time()-aggregation_start)))
         return total_scores
+    
     
     @staticmethod
     def _get_condor_cluster(submit_output):
