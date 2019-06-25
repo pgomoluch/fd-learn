@@ -10,7 +10,8 @@ import sys
 import time
 
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs, compute_ipc_reward, save_params
-from condor_evaluator import CondorEvaluator
+from evaluators.condor_evaluator import CondorEvaluator
+from evaluators.sequential_evaluator import SequentialEvaluator
 
 from problem_generators.transport_generator import TransportGenerator
 from problem_generators.parking_generator import ParkingGenerator
@@ -136,6 +137,18 @@ def score_params(params, paths_and_costs):
     
     return total_score
 
+def cem_evolution_step(mean, cov, params, sorted_ids):
+    best_ids = sorted_ids[:ELITE_SIZE]
+    new_mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
+    new_cov = (1-ALPHA) * cov + ALPHA * np.cov(params[best_ids], rowvar=False)
+    return (new_mean, new_cov)
+
+def fixed_variance_evolution_step(mean, cov, params, sorted_ids):
+    best_ids = sorted_ids[:ELITE_SIZE]
+    new_mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
+    return (new_mean, cov)
+
+
 continuing = False
 
 DOMAIN = sys.argv[1]
@@ -212,12 +225,10 @@ while time.time() - start_time < TRAINING_TIME:
     
     scores = np.array(scores)
     sorted_ids = np.argsort(-scores)
-    best_ids = sorted_ids[:ELITE_SIZE]
     
     # Only update the distribution if some problems have been solved
     if scores[sorted_ids[0]] > 0.001:
-        mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
-        cov = (1-ALPHA) * cov + ALPHA * np.cov(params[best_ids], rowvar=False)
+        mean, cov = cem_evolution_step(mean, cov, params, sorted_ids)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:
