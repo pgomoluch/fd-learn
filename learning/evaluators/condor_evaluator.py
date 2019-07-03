@@ -17,6 +17,7 @@ CONDOR_SCRIPT = """#!/bin/bash
 cd condor/$1/$2
 echo "Hello condor worker 2"
 /usr/bin/python {fd_path} --build release64 --overall-time-limit {time_limit} --overall-memory-limit 4G {domain} $3 --heuristic "{heuristic}" --search "{search}" > fd.out
+rm output output.sas
 echo "Condor worker done"
 """
 

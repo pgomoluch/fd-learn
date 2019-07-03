@@ -31,7 +31,7 @@ ParametrizedSearch::ParametrizedSearch(const Options &opts)
       params_path(opts.get<string>("params")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
-      learning_log("rl-log.txt"),
+      //learning_log("rl-log.txt"),
       action_count(actions.size(), 0),
       real_dist(0.0, 1.0)
 {
@@ -212,7 +212,7 @@ SearchStatus ParametrizedSearch::random_walk(StateID &state_id, algorithms::Orde
         GlobalState succ_state = state_registry.get_successor_state(rollout_state, *op);
         statistics.inc_generated();
         SearchNode node = search_space.get_node(rollout_state);
-        learning_log << "#";
+        //learning_log << "#";
         bool is_preferred = preferred_operators.contains(op);
         EvaluationContext eval_context = process_state(node, rollout_state, op, succ_state, is_preferred, true);
         // Get the preferred operators for the next iteration.
@@ -224,7 +224,7 @@ SearchStatus ParametrizedSearch::random_walk(StateID &state_id, algorithms::Orde
         rollout_state = succ_state;
     }
 
-    learning_log << endl;
+    //learning_log << endl;
     return IN_PROGRESS;
 }
 
@@ -320,11 +320,11 @@ void ParametrizedSearch::update_search_parameters()
     GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
     LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;
 
-    for (auto f: features)
-        learning_log << f << " ";
-    learning_log << endl;
-    learning_log << EPSILON << " " << STALL_SIZE << " " << N_ROLLOUTS << " "
-        << ROLLOUT_LENGTH << " " << GLOBAL_EXP_LIMIT << " " << LOCAL_EXP_LIMIT << endl << endl; 
+    //for (auto f: features)
+    //    learning_log << f << " ";
+    //learning_log << endl;
+    //learning_log << EPSILON << " " << STALL_SIZE << " " << N_ROLLOUTS << " "
+    //    << ROLLOUT_LENGTH << " " << GLOBAL_EXP_LIMIT << " " << LOCAL_EXP_LIMIT << endl << endl; 
 }
 
 EvaluationContext ParametrizedSearch::process_state(const SearchNode &node, const GlobalState &state,
