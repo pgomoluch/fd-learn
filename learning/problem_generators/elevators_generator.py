@@ -26,12 +26,12 @@ class ElevatorsGenerator(BaseGenerator):
         base_name = 'p{floors}_{passengers}_1'.format(**self.params)
         os.rename(base_name + '.pddl', result_path)
         os.remove(base_name + '.txt')
+        time.sleep(1.1)
 
     def generate_batch(self, n, base_path = 'problem'):
         for i in range(1, n+1):
             path = base_path + str(i) + '.pddl'
             self.generate(path)
-            time.sleep(1.1)
     
     def easier(self):
         if self.params['passengers'] > 1:
