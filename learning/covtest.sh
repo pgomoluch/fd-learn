@@ -19,16 +19,19 @@ do
     fd_command="../fast-downward.py --build=release64 $1/domain.pddl $p $2"
     # LAMA-first
     #fd_command="../fast-downward.py --build=release64 --alias lama-first $1/domain.pddl $p"
+    # LAMA 2011
+    #fd_command="../fast-downward.py --build=release64 --alias seq-sat-lama-2011 $1/domain.pddl $p"
     echo $fd_command
     timeout $3 $fd_command > covtest-tmp-result
     return_code=$?
-    if [ $return_code -eq 0 ]
+    #if [ $return_code -eq 0 ]
+    if grep -q "Plan cost:" covtest-tmp-result # anytime version
     then
         counter=$((counter+1))
         results=(${results[@]} 1)
         n_state=`awk '/Generated [0-9]+ state/ {print $2}' covtest-tmp-result`
         n_states=(${n_states[@]} $n_state)
-        plan_cost=`awk '/Plan cost: [0-9]+/ {print $3}' covtest-tmp-result`
+        plan_cost=`awk '/Plan cost: [0-9]+/ {print $3}' covtest-tmp-result | sort -n | head -n 1`
         plan_costs=(${plan_costs[@]} $plan_cost)
         search_time=`awk '/Search time: [\.0-9]+s/ {print $3}' covtest-tmp-result`
         search_times=(${search_times[@]} $search_time)
