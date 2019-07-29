@@ -27,23 +27,16 @@ ParametrizedSearch::ParametrizedSearch(const Options &opts)
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       ref_time(opts.get<int>("t") / 2),
-      n_states(compute_n_states()),
       params_path(opts.get<string>("params")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       //learning_log("rl-log.txt"),
-      action_count(actions.size(), 0),
       real_dist(0.0, 1.0)
 {
     
     Options state_list_opts;
     const vector<ScalarEvaluator*> &evals =
             opts.get_list<ScalarEvaluator *>("evals");
-    
-    // weights.reserve(n_states);
-    // auto initial_weights = vector<double>(actions.size(), INITIAL_WEIGHT);
-    // for (unsigned i = 0; i < n_states; ++i)
-    //    weights.push_back(initial_weights);
 
     search_start = steady_clock::now();
     
@@ -108,7 +101,7 @@ void ParametrizedSearch::initialize() {
 
         // At the moment we only support a single heuristic
         int h = eval_context.get_heuristic_value(heuristics[0]);
-        initial_h = all_time_best_h = best_h = previous_best_h = h;
+        initial_h = best_h = h;
         open_list->insert(eval_context, initial_state.get_id());
     }
 
@@ -360,10 +353,7 @@ EvaluationContext ParametrizedSearch::process_state(const SearchNode &node, cons
         int h = eval_context.get_heuristic_value(heuristics[0]);
         if (best_h > h) {
             best_h = h;
-            if (all_time_best_h > h) {
-                all_time_best_h = h;
-                expansions_without_progress = 0;
-            }
+            expansions_without_progress = 0;
         }
         open_list->insert(eval_context, succ_state.get_id());
         return eval_context;
@@ -385,13 +375,6 @@ EvaluationContext ParametrizedSearch::process_state(const SearchNode &node, cons
         return eval_context;
     }
     return eval_context;
-}
-
-unsigned ParametrizedSearch::compute_n_states() {
-    unsigned result = 1;
-    for (unsigned u: STATE_SPACE)
-        result *= u;
-    return result;
 }
 
 shared_ptr<RAOpenListFactory> ParametrizedSearch::create_simple_ra_open_list_factory(
