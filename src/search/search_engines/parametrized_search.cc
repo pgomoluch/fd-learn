@@ -297,6 +297,11 @@ vector<double> ParametrizedSearch::get_state_features() {
 void ParametrizedSearch::update_search_parameters()
 {
     auto features = get_state_features();
+    //for (auto f: features)
+    //    learning_log << f << " ";
+    for (unsigned i = 0; i < features.size(); ++i)
+        features[i] /= FEATURE_SCALES[i];
+        
     Matrix result(6, 1);
     nn->evaluate(features, result);
     
@@ -304,11 +309,11 @@ void ParametrizedSearch::update_search_parameters()
     auto nonneg = [](double x) { return x < 0.0 ? 0.0 : x; };
 
     EPSILON = sigma(result.at(0, 0));
-    STALL_SIZE = nonneg(result.at(1, 0));
-    N_ROLLOUTS = nonneg(result.at(2, 0));
-    ROLLOUT_LENGTH = nonneg(result.at(3, 0));
+    STALL_SIZE = nonneg(result.at(1, 0)) * STALL_SIZE_SCALE;
+    N_ROLLOUTS = nonneg(result.at(2, 0)) * N_ROLLOUTS_SCALE;
+    ROLLOUT_LENGTH = nonneg(result.at(3, 0)) * ROLLOUT_LENGTH_SCALE;
     
-    double cycle_length = nonneg(result.at(4, 0));
+    double cycle_length = nonneg(result.at(4, 0)) * GLOBAL_LOCAL_CYCLE_SCALE;
     double percentage_local = sigma(result.at(5, 0));
     GLOBAL_EXP_LIMIT = cycle_length * (1 - percentage_local);
     LOCAL_EXP_LIMIT = cycle_length - GLOBAL_EXP_LIMIT;

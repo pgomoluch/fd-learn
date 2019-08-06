@@ -35,6 +35,13 @@ class ParametrizedSearch : public SearchEngine {
     unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
     unsigned STALL_SIZE = 10;
+    
+    // Scaling inputs and outputs of the network
+    const unsigned ROLLOUT_LENGTH_SCALE = 10;
+    const unsigned N_ROLLOUTS_SCALE = 5;
+    const unsigned GLOBAL_LOCAL_CYCLE_SCALE = 100;
+    const unsigned STALL_SIZE_SCALE = 10;
+    const std::vector<double> FEATURE_SCALES = {277, 277, 179, 1149000};
     std::unique_ptr<Network> nn;
 
     RandomAccessStateOpenList *open_list;
