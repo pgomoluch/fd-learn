@@ -12,6 +12,7 @@ import time
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs, compute_ipc_reward, save_params
 from evaluators.condor_evaluator import CondorEvaluator
 from evaluators.sequential_evaluator import SequentialEvaluator
+from evaluators.parallel_evaluator import ParallelEvaluator
 
 from problem_generators.transport_generator import TransportGenerator
 from problem_generators.parking_generator import ParkingGenerator
@@ -41,10 +42,11 @@ RUNS_PER_PROBLEM = 4
 MAX_PROBLEM_TIME = 1800.0
 ALPHA = 0.7
 
-STATE_FILE_PATH = 'search_state.npz'
+OUTPUT_PATH_PREFIX = '' # leave empty to write output files in the working dir
+STATE_FILE_PATH = os.path.join(OUTPUT_PATH_PREFIX, 'search_state.npz')
 ALL_PROBLEMS = True
 GENERATE_PROBLEMS = True
-PARAMS_DIR = 'params'
+PARAMS_DIR = os.path.join(OUTPUT_PATH_PREFIX, 'params')
 
 if GENERATE_PROBLEMS:
     generator_class = TransportGenerator
@@ -159,8 +161,8 @@ if len(sys.argv) > 4:
     STATE_FILE_PATH = sys.argv[4]
 
 start_time = time.time()
-params_log = open('params_log.txt', 'w')
-condor_log = open('condor_log.txt', 'w')
+params_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'params_log.txt'), 'w')
+condor_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'condor_log.txt'), 'w')
 
 evaluator = CondorEvaluator(
     population_size = POPULATION_SIZE,
@@ -182,6 +184,7 @@ else:
     cov = np.diag(np.square(param_handler.initial_stddev))
 
 np.set_printoptions(suppress=True,precision=4)
+os.makedirs(PARAMS_DIR, exist_ok=True)
 
 kinit_time = 0
 iteration = 0
