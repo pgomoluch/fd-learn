@@ -1,6 +1,6 @@
 from rl_common import compute_ipc_reward, NoRewardException
 
-class BaseEvaluator:
+class BaseEvaluator(object):
     
     def __init__(self, population_size, n_test_problems, domain_path,
         heuristic_str, search_str, max_problem_time, param_handler):

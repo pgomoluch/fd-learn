@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import ast
+import errno
 import glob
 import numpy as np
 import os
@@ -35,11 +36,11 @@ UNITS = [0.05, 1, 0.05, 5]
 MIN_PARAMS = [0.0, 0.0, 0.0, 0.0]
 MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 
-POPULATION_SIZE = 50
-ELITE_SIZE = 10
-N_TEST_PROBLEMS = 20
+POPULATION_SIZE = 4
+ELITE_SIZE = 2
+N_TEST_PROBLEMS = 10
 RUNS_PER_PROBLEM = 4
-MAX_PROBLEM_TIME = 1800.0
+MAX_PROBLEM_TIME = 5.0
 ALPHA = 0.7
 
 OUTPUT_PATH_PREFIX = '' # leave empty to write output files in the working dir
@@ -50,7 +51,7 @@ PARAMS_DIR = os.path.join(OUTPUT_PATH_PREFIX, 'params')
 
 if GENERATE_PROBLEMS:
     generator_class = TransportGenerator
-    generator_key = 'ipc2011'
+    generator_key = 'agr2019'
     # generator = TransportGenerator(4, 11, 30)
     # difficulty_level = -7
     # generator = ParkingGenerator(21, 40)
@@ -164,7 +165,7 @@ start_time = time.time()
 params_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'params_log.txt'), 'w')
 condor_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'condor_log.txt'), 'w')
 
-evaluator = CondorEvaluator(
+evaluator = ParallelEvaluator(
     population_size = POPULATION_SIZE,
     n_test_problems = N_TEST_PROBLEMS,
     domain_path = DOMAIN,
@@ -184,7 +185,13 @@ else:
     cov = np.diag(np.square(param_handler.initial_stddev))
 
 np.set_printoptions(suppress=True,precision=4)
-os.makedirs(PARAMS_DIR, exist_ok=True)
+
+#os.makedirs(PARAMS_DIR, exist_ok=True) # python3
+try:
+    os.makedirs(PARAMS_DIR)
+except OSError as e:
+    if e.errno != errno.EEXIST:
+        raise
 
 kinit_time = 0
 iteration = 0

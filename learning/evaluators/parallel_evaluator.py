@@ -1,9 +1,11 @@
+import errno
 import itertools
 import os
 import numpy as np
 import subprocess
 import time
 
+from contextlib import closing
 from multiprocessing import Pool
 
 from rl_common import get_cost, save_params
@@ -13,13 +15,39 @@ N_PROC = 4
 PARAMS_PATH = 'params{}.txt'
 ONLINE_REFERENCE_COSTS = True
 
+# data is (conf, (params_id, (problem_id, problem_path))) to stay close to the Python3 version. Sorry.
+def run_planner(data):
+    conf, (params_id, (problem_id, problem_path)) = data
+    
+    try:
+        planner_output = subprocess.check_output([str(conf['fd_path']), '--build', 'release64',
+            '--overall-time-limit', str(int(conf['_max_problem_time'])),
+            '--overall-memory-limit', '4G', os.path.abspath(conf['_domain_path']), problem_path, '--heuristic',
+            conf['_heuristic_str'], '--search',
+            conf['_search_str'] % ('../../' + PARAMS_PATH.format(params_id))],
+            cwd=os.path.join(str(params_id), str(problem_id))
+        ).decode('utf-8')
+        try:
+            plan_cost = get_cost(planner_output)
+        except:
+            planner_output = 'Error getting cost.'
+            plan_cost = -1
+    except subprocess.CalledProcessError as e:
+        planner_output = 'CalledProcessError:\n' + e.output.decode('utf-8')
+        plan_cost = -1
+    
+    output_file = open(os.path.join(str(params_id), str(problem_id), 'out.txt'), 'w')
+    output_file.write(planner_output)
+    output_file.close()
+    
+    return plan_cost
 
 class ParallelEvaluator(BaseEvaluator):
 
     def __init__(self, population_size, n_test_problems, domain_path,
         heuristic_str, search_str, max_problem_time, param_handler):
     
-        super().__init__(population_size, n_test_problems, domain_path,
+        super(ParallelEvaluator, self).__init__(population_size, n_test_problems, domain_path,
             heuristic_str, search_str, max_problem_time, param_handler)
         
         self.fd_path = os.path.join(
@@ -28,7 +56,12 @@ class ParallelEvaluator(BaseEvaluator):
         )
         for i in range(population_size):
             for j in range(n_test_problems):
-                os.makedirs(os.path.join(str(i), str(j)), exist_ok=True)
+                #os.makedirs(os.path.join(str(i), str(j)), exist_ok=True) # python3
+                try:
+                    os.makedirs(os.path.join(str(i), str(j)))
+                except OSError as e:
+                    if e.errno != errno.EEXIST:
+                        raise
 
 
     def score_params(self, all_params, paths_and_costs, log=None):
@@ -41,15 +74,28 @@ class ParallelEvaluator(BaseEvaluator):
             
         for i in range(len(problem_list)):
             problem_list[i] = (i, problem_list[i]) # add ids to problem paths
-        print(problem_list)    
+        #print(problem_list)    
         
         # get a cross product
         params_problems = itertools.product(range(len(all_params)), problem_list)
         
         start_time = time.time()
         
-        with Pool(N_PROC) as p:
-            iteration_costs = p.map(self.run_planner, params_problems)
+        # Python3 
+        #with Pool(N_PROC) as p:
+        #    iteration_costs = p.map(self.run_planner, params_problems)
+        
+        # Python2
+        p = Pool(N_PROC)
+        conf = dict()
+        conf['fd_path'] = self.fd_path
+        conf['_max_problem_time'] = self._max_problem_time
+        conf['_domain_path'] = self._domain_path
+        conf['_heuristic_str'] = self._heuristic_str
+        conf['_search_str'] = self._search_str 
+        data = [(conf, pp) for pp in params_problems]
+        iteration_costs = p.map(run_planner, data)
+        p.terminate()
         
         elapsed_time = time.time() - start_time
         
@@ -85,29 +131,30 @@ class ParallelEvaluator(BaseEvaluator):
         
         return total_scores
 
-    def run_planner(self, params_problem):
-        params_id, (problem_id, problem_path) = params_problem
-        
-        try:
-            planner_output = subprocess.check_output([str(self.fd_path), '--build', 'release64',
-                '--overall-time-limit', str(int(self._max_problem_time)),
-                '--overall-memory-limit', '4G', os.path.abspath(self._domain_path), problem_path, '--heuristic',
-                self._heuristic_str, '--search',
-                self._search_str % ('../../' + PARAMS_PATH.format(params_id))],
-                cwd=os.path.join(str(params_id), str(problem_id))
-            ).decode('utf-8')
-            try:
-                plan_cost = get_cost(planner_output)
-            except:
-                planner_output = 'Error getting cost.'
-                plan_cost = -1
-        except subprocess.CalledProcessError as e:
-            planner_output = 'CalledProcessError:\n' + e.output.decode('utf-8')
-            plan_cost = -1
-        
-        output_file = open(os.path.join(str(params_id), str(problem_id), 'out.txt'), 'w')
-        output_file.write(planner_output)
-        output_file.close()
-        
-        return plan_cost
+# Python3
+#    def run_planner(self, params_problem):
+#        params_id, (problem_id, problem_path) = params_problem
+#        
+#        try:
+#            planner_output = subprocess.check_output([str(self.fd_path), '--build', 'release64',
+#                '--overall-time-limit', str(int(self._max_problem_time)),
+#                '--overall-memory-limit', '4G', os.path.abspath(self._domain_path), problem_path, '--heuristic',
+#                self._heuristic_str, '--search',
+#                self._search_str % ('../../' + PARAMS_PATH.format(params_id))],
+#                cwd=os.path.join(str(params_id), str(problem_id))
+#            ).decode('utf-8')
+#            try:
+#                plan_cost = get_cost(planner_output)
+#            except:
+#                planner_output = 'Error getting cost.'
+#                plan_cost = -1
+#        except subprocess.CalledProcessError as e:
+#            planner_output = 'CalledProcessError:\n' + e.output.decode('utf-8')
+#            plan_cost = -1
+#        
+#        output_file = open(os.path.join(str(params_id), str(problem_id), 'out.txt'), 'w')
+#        output_file.write(planner_output)
+#        output_file.close()
+#        
+#        return plan_cost
 

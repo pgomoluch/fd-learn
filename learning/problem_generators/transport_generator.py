@@ -1,5 +1,5 @@
 import os
-import pathlib
+#import pathlib
 import time
 import subprocess
 
@@ -8,10 +8,18 @@ from .base_generator import BaseGenerator
 class TransportGenerator(BaseGenerator):
     
     # ../../../IPC/own-transport/generator14L/ relative to this module; move to configuration file
-    generators_dir = pathlib.Path(*pathlib.Path(__file__).absolute().parts[:-5]).joinpath('IPC', 'own-transport', 'generator14L')
-    ipc_generator1 = str(generators_dir.joinpath('city-generator.py'))
-    ipc_generator2 = str(generators_dir.joinpath('two-cities-generator.py'))
-    ipc_generator3 = str(generators_dir.joinpath('three-cities-generator.py'))
+    #generators_dir = pathlib.Path(*pathlib.Path(__file__).absolute().parts[:-5]).joinpath('IPC', 'own-transport', 'generator14L')
+    generator_dir = os.path.abspath(__file__)
+    for i in range(5):
+        generator_dir = os.path.dirname(generator_dir)
+    generator_dir = os.path.join(generator_dir, 'IPC', 'own-transport', 'generator14L')
+    
+    #ipc_generator1 = str(generators_dir.joinpath('city-generator.py'))
+    #ipc_generator2 = str(generators_dir.joinpath('two-cities-generator.py'))
+    #ipc_generator3 = str(generators_dir.joinpath('three-cities-generator.py'))
+    ipc_generator1 = str(os.path.join(generator_dir, 'city-generator.py'))
+    ipc_generator2 = str(os.path.join(generator_dir, 'two-cities-generator.py'))
+    ipc_generator3 = str(os.path.join(generator_dir, 'three-cities-generator.py'))
         
     def __init__(self, trucks, packages, nodes=15, cities=1, degree=4):
         self.trucks = trucks
