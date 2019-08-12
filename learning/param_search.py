@@ -3,6 +3,7 @@
 import ast
 import errno
 import glob
+import math
 import numpy as np
 import os
 import random
@@ -36,11 +37,11 @@ UNITS = [0.05, 1, 0.05, 5]
 MIN_PARAMS = [0.0, 0.0, 0.0, 0.0]
 MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 
-POPULATION_SIZE = 4
-ELITE_SIZE = 2
-N_TEST_PROBLEMS = 10
+POPULATION_SIZE = 50
+ELITE_SIZE = 10
+N_TEST_PROBLEMS = 20
 RUNS_PER_PROBLEM = 4
-MAX_PROBLEM_TIME = 5.0
+MAX_PROBLEM_TIME = 1800.0
 ALPHA = 0.7
 
 OUTPUT_PATH_PREFIX = '' # leave empty to write output files in the working dir
@@ -151,6 +152,26 @@ def fixed_variance_evolution_step(mean, cov, params, sorted_ids):
     new_mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
     return (new_mean, cov)
 
+def canonical_evolution_step(mean, cov, params, sorted_ids):
+    
+    if not canonical_evolution_step.weights:
+        w = []
+        m = len(sorted_ids)
+        for i in range(m):
+            w.append(math.log(m+0.5) - math.log(i+1))
+        s = sum(w)
+        w = [x/s for x in w]
+        canonical_evolution_step.weights = w
+        print('CES weights:', canonical_evolution_step.weights)
+    
+    new_mean = np.zeros(mean.shape)
+    for i in sorted_ids:
+        new_mean += canonical_evolution_step.weights[i] * params[i]
+    
+    return (new_mean, cov)
+
+
+canonical_evolution_step.weights = None
 
 continuing = False
 
