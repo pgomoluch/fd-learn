@@ -284,13 +284,17 @@ StateID ParametrizedSearch::get_random_state() {
 
 vector<double> ParametrizedSearch::get_state_features() {
     vector<double> result;
+    
     result.push_back((double) initial_h);
     result.push_back((double) best_h);
     result.push_back((double)
         duration_cast<seconds>(steady_clock::now()-search_start).count());
     result.push_back((double) expansions_without_progress);
-    // result.push_back(
-    //    duration_cast<milliseconds>(steady_clock::now()-search_start).count() > ref_time);
+
+    result.push_back((double)statistics.get_generated());
+    result.push_back((double)statistics.get_evaluated_states()); // unlike generated, this excludes duplicates
+    result.push_back((double)statistics.get_expanded());
+    
     return result;
 }
 

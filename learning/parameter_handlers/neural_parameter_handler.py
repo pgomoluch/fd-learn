@@ -2,7 +2,7 @@ import numpy as np
 
 class NeuralParameterHandler:
     
-    N_FEATURES = 4
+    N_FEATURES = 7
     N_SEARCH_PARAMETERS = 6
     
     def __init__(self):

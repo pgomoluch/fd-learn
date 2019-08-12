@@ -30,7 +30,7 @@ class ParametrizedSearch : public SearchEngine {
     const bool reopen_closed_nodes;
     
     double EPSILON = 0.5;
-    unsigned ROLLOUT_LENGTH = 20;
+    unsigned ROLLOUT_LENGTH = 10;
     unsigned N_ROLLOUTS = 5;
     unsigned GLOBAL_EXP_LIMIT = 100;
     unsigned LOCAL_EXP_LIMIT = 100;
@@ -41,7 +41,7 @@ class ParametrizedSearch : public SearchEngine {
     const unsigned N_ROLLOUTS_SCALE = 5;
     const unsigned GLOBAL_LOCAL_CYCLE_SCALE = 100;
     const unsigned STALL_SIZE_SCALE = 10;
-    const std::vector<double> FEATURE_SCALES = {277, 277, 179, 1149000};
+    const std::vector<double> FEATURE_SCALES = {191, 191, 171, 5066, 992274, 688313, 13800};
     std::unique_ptr<Network> nn;
 
     RandomAccessStateOpenList *open_list;
