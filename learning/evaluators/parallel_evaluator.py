@@ -3,6 +3,7 @@ import itertools
 import os
 import numpy as np
 import subprocess
+import shutil
 import time
 
 from contextlib import closing
@@ -19,12 +20,19 @@ ONLINE_REFERENCE_COSTS = True
 def run_planner(data):
     conf, (params_id, (problem_id, problem_path)) = data
     
+    local_problem = 'problem.pddl'
+    local_params = 'params.txt'
+    
+    params_filename = PARAMS_PATH.format(params_id)
+    shutil.copyfile(params_filename, os.path.join(str(params_id), str(problem_id), local_params))
+    shutil.copyfile(problem_path, os.path.join(str(params_id), str(problem_id), local_problem))
+    
     try:
         planner_output = subprocess.check_output([str(conf['fd_path']), '--build', 'release64',
             '--overall-time-limit', str(int(conf['_max_problem_time'])),
-            '--overall-memory-limit', '4G', os.path.abspath(conf['_domain_path']), problem_path, '--heuristic',
+            '--overall-memory-limit', '4G', os.path.abspath(conf['_domain_path']), local_problem, '--heuristic',
             conf['_heuristic_str'], '--search',
-            conf['_search_str'] % ('../../' + PARAMS_PATH.format(params_id))],
+            conf['_search_str'] % local_params],
             cwd=os.path.join(str(params_id), str(problem_id))
         ).decode('utf-8')
         try:

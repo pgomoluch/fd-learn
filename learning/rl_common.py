@@ -60,7 +60,7 @@ def compute_ipc_reward(plan_cost, reference_cost):
     elif plan_cost == 0:
         raise NoRewardException()
     else:
-        return reference_cost / plan_cost
+        return float(reference_cost) / plan_cost
 
 def save_params(params, target_types, filename):
     f = open(filename, 'w')
