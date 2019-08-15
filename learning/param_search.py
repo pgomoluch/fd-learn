@@ -15,6 +15,7 @@ from rl_common import get_output_with_timeout, get_cost, compute_reference_costs
 from evaluators.condor_evaluator import CondorEvaluator
 from evaluators.sequential_evaluator import SequentialEvaluator
 from evaluators.parallel_evaluator import ParallelEvaluator
+from evaluators.mpi_evaluator import MPIEvaluator
 
 from problem_generators.transport_generator import TransportGenerator
 from problem_generators.parking_generator import ParkingGenerator
@@ -186,7 +187,7 @@ start_time = time.time()
 params_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'params_log.txt'), 'w')
 condor_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'condor_log.txt'), 'w')
 
-evaluator = ParallelEvaluator(
+evaluator = MPIEvaluator(
     population_size = POPULATION_SIZE,
     n_test_problems = N_TEST_PROBLEMS,
     domain_path = DOMAIN,
@@ -259,7 +260,7 @@ while time.time() - start_time < TRAINING_TIME:
     
     # Only update the distribution if some problems have been solved
     if scores[sorted_ids[0]] > 0.001:
-        mean, cov = cem_evolution_step(mean, cov, params, sorted_ids)
+        mean, cov = fixed_variance_evolution_step(mean, cov, params, sorted_ids)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:
