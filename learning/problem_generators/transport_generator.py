@@ -47,10 +47,16 @@ class TransportGenerator(BaseGenerator):
         seed = time.time()
         ipc_generator_command = ['python2', self.generator, str(self.nodes), str(self.size),
             str(self.degree), str(self.mindistance), str(self.trucks), str(self.packages), str(seed)]
-        problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
-        problem_file = open(result_path, 'w')
-        problem_file.write(problem)
-        problem_file.close()
+        fail_count = 0
+        while fail_count < 5:
+            try:
+                problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
+                problem_file = open(result_path, 'w')
+                problem_file.write(problem)
+                problem_file.close()
+                break
+            except subprocess.CalledProcessError:
+                pass
         # Remove the tex file created by the generator
         tex_path = 'city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex' % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed))
         if os.path.exists(tex_path):
