@@ -1,5 +1,6 @@
 from mpi4py.futures import MPIPoolExecutor
 
+import glob
 import itertools
 import numpy as np
 import os
@@ -35,6 +36,9 @@ def run_planner(data):
     except subprocess.CalledProcessError as e:
         planner_output = 'CalledProcessError:\n' + e.output.decode('utf-8')
         plan_cost = -1
+    
+    for f in glob.glob(os.path.join(str(params_id), str(problem_id), 'core*')):
+        os.remove(f)
     
     output_file = open(os.path.join(str(params_id), str(problem_id), 'out.txt'), 'w')
     output_file.write(planner_output)
