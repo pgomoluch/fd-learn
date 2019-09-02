@@ -4,8 +4,14 @@ import subprocess
 
 from .base_generator import BaseGenerator
 
-ipc_generator1 = '../../../IPC/own-elevators/generator/generate_elevators {passengers} {passengers} 1 1 1 {floors} {area_size} {n_fast} {n_slow} {fast_capacity} {slow_capacity}'
-ipc_generator2 = '../../../IPC/own-elevators/generator/generate_pddl {floors} {floors} 1 {passengers} {passengers} 1 1 1'
+#ipc_generator1 = '../../../IPC/own-elevators/generator/generate_elevators {passengers} {passengers} 1 1 1 {floors} {area_size} {n_fast} {n_slow} {fast_capacity} {slow_capacity}'
+#ipc_generator2 = '../../../IPC/own-elevators/generator/generate_pddl {floors} {floors} 1 {passengers} {passengers} 1 1 1'
+generator_dir = os.path.abspath(__file__)
+for i in range(5):
+    generator_dir = os.path.dirname(generator_dir)
+generator_dir = os.path.join(generator_dir, 'IPC', 'own-elevators', 'generator')
+ipc_generator1 = os.path.join(generator_dir, 'generate_elevators') + ' {passengers} {passengers} 1 1 1 {floors} {area_size} {n_fast} {n_slow} {fast_capacity} {slow_capacity}'
+ipc_generator2 = os.path.join(generator_dir, 'generate_pddl') + ' {floors} {floors} 1 {passengers} {passengers} 1 1 1'
 
 class ElevatorsGenerator(BaseGenerator):
 

@@ -4,7 +4,12 @@ import subprocess
 
 from .base_generator import BaseGenerator
 
-ipc_generator = '../../../IPC/own-floortile/floortile-generator.py'
+#ipc_generator = '../../../IPC/own-floortile/floortile-generator.py'
+generator_dir = os.path.abspath(__file__)
+for i in range(5):
+    generator_dir = os.path.dirname(generator_dir)
+ipc_generator = os.path.join(generator_dir, 'IPC', 'own-floortile', 'floortile-generator.py')
+
 
 class FloortileGenerator(BaseGenerator):
 

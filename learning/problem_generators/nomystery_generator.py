@@ -4,7 +4,13 @@ import subprocess
 
 from .base_generator import BaseGenerator
 
-ipc_generator = '../../../IPC/own-no-mystery/generator/nomystery -l %d -p %d -c %f -s %d'
+#ipc_generator = '../../../IPC/own-no-mystery/generator/nomystery -l %d -p %d -c %f -s %d'
+generator_dir = os.path.abspath(__file__)
+for i in range(5):
+    generator_dir = os.path.dirname(generator_dir)
+generator_path = os.path.join(generator_dir, 'IPC', 'own-no-mystery', 'generator', 'nomystery')
+ipc_generator = generator_path + ' -l %d -p %d -c %f -s %d'
+
 
 class NomysteryGenerator(BaseGenerator):
     

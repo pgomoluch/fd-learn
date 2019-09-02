@@ -4,7 +4,11 @@ import subprocess
 
 from .base_generator import BaseGenerator
 
-ipc_generator = '../../../IPC/own-parking/parking-generator.pl'
+#ipc_generator = '../../../IPC/own-parking/parking-generator.pl'
+ipc_generator = os.path.abspath(__file__)
+for i in range(5):
+    ipc_generator = os.path.dirname(ipc_generator)
+ipc_generator = os.path.join(ipc_generator, 'IPC', 'own-parking', 'parking-generator.pl')
 
 class ParkingGenerator(BaseGenerator):
     
