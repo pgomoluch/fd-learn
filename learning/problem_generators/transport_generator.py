@@ -56,7 +56,12 @@ class TransportGenerator(BaseGenerator):
                 problem_file.close()
                 break
             except subprocess.CalledProcessError:
-                pass
+                fail_count += 1
+                if fail_count > 4:
+                    break
+                else:
+                    time.sleep(1)
+                    seed = time.time()
         # Remove the tex file created by the generator
         tex_path = 'city-sequential-%dnodes-%dsize-%ddegree-%dmindistance-%dtrucks-%dpackages-%dseed.tex' % (self.nodes, self.size, self.degree, self.mindistance, self.trucks, self.packages, int(seed))
         if os.path.exists(tex_path):
