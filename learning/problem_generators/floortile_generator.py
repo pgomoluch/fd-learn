@@ -23,7 +23,7 @@ class FloortileGenerator(BaseGenerator):
             self.rows, self.columns, self.robots)
     
     def generate(self, result_path = 'problem.pddl'):
-        ipc_generator_command = ['python', ipc_generator, 'problem',
+        ipc_generator_command = ['python2', ipc_generator, 'problem',
            str(self.rows), str(self.columns), str(self.robots), 'seq']
         problem = subprocess.check_output(ipc_generator_command).decode('utf-8')
         problem_file = open(result_path, 'w')

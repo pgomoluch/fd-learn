@@ -28,6 +28,7 @@ ParametrizedSearch::ParametrizedSearch(const Options &opts)
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       ref_time(opts.get<int>("t") / 2),
       params_path(opts.get<string>("params")),
+      scales_path(opts.get<string>("scales")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       //learning_log("rl-log.txt"),
@@ -58,6 +59,14 @@ void ParametrizedSearch::initialize() {
 
     if (neural_parametrized) {
         nn = unique_ptr<Network>(new Network(params_path.c_str(), true));
+        if (!scales_path.empty()) {
+            ifstream scales_file(scales_path);
+            for (double &s: FEATURE_SCALES)
+                scales_file >> s;
+            if (!scales_file)
+                exit(1); // wrong scales file provided
+            scales_file.close();
+        }
     } else {
         ifstream params_file(params_path);
         if(params_file) {
@@ -82,6 +91,10 @@ void ParametrizedSearch::initialize() {
         cout << "\nlocal_exp_limit = " << LOCAL_EXP_LIMIT;
         cout << endl;
     }
+    cout << "\nFeature scales: ";
+    for (double s: FEATURE_SCALES)
+        cout << s << " ";
+    cout << endl;
 
     const GlobalState &initial_state = state_registry.get_initial_state();
     for (Heuristic *h: heuristics) {
@@ -456,6 +469,7 @@ static SearchEngine *_parse(OptionParser &parser) {
         "boost",
         "boost value for preferred operator open lists", "0");
     parser.add_option<string>("params", "path to the weights file", "params.txt");
+    parser.add_option<string>("scales", "path to the file containing feature scales", "");
     parser.add_option<int>("t", "time allocated for the search [ms]", "1000");
 
     add_pruning_option(parser);

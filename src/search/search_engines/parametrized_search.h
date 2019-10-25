@@ -26,9 +26,11 @@ using RandomAccessStateOpenList = RandomAccessOpenList<StateOpenListEntry>;
 using SimpleRandomAccessStateOpenList = SimpleRandomAccessOpenList<StateOpenListEntry>;
 
 class ParametrizedSearch : public SearchEngine {
-    const bool neural_parametrized = true;
     const bool reopen_closed_nodes;
-    
+
+    const bool neural_parametrized = true;
+
+    // Default search parameters
     double EPSILON = 0.5;
     unsigned ROLLOUT_LENGTH = 10;
     unsigned N_ROLLOUTS = 5;
@@ -36,12 +38,16 @@ class ParametrizedSearch : public SearchEngine {
     unsigned LOCAL_EXP_LIMIT = 100;
     unsigned STALL_SIZE = 10;
     
+    // The number of state features
+    const unsigned N_FEATURES = 7;
+
     // Scaling inputs and outputs of the network
+    std::vector<double> FEATURE_SCALES = std::vector<double>(N_FEATURES, 1.0);
     const unsigned ROLLOUT_LENGTH_SCALE = 10;
     const unsigned N_ROLLOUTS_SCALE = 5;
     const unsigned GLOBAL_LOCAL_CYCLE_SCALE = 100;
     const unsigned STALL_SIZE_SCALE = 10;
-    const std::vector<double> FEATURE_SCALES = {191, 191, 171, 5066, 992274, 688313, 13800};
+
     std::unique_ptr<Network> nn;
 
     RandomAccessStateOpenList *open_list;
@@ -58,6 +64,7 @@ class ParametrizedSearch : public SearchEngine {
     int best_h = -1;
     const unsigned ref_time; // milliseconds
     std::string params_path;
+    std::string scales_path;
     std::chrono::steady_clock::time_point search_start; 
     std::mt19937 rng;
     std::ofstream learning_log;
