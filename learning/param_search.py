@@ -27,7 +27,10 @@ from parameter_handlers.direct_parameter_handler import DirectParameterHandler
 from parameter_handlers.neural_parameter_handler import NeuralParameterHandler
 
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
-SEARCH = 'parametrized(h1,params=%s)'
+SEARCH = 'parametrized(h1,params=%s,scales={scales_path})'
+SEARCH = SEARCH.format(
+    scales_path = os.path.abspath(os.path.join(os.getcwd(), 'scales.txt'))
+)
 
 #param_handler = DirectParameterHandler()
 param_handler = NeuralParameterHandler()
@@ -42,10 +45,10 @@ POPULATION_SIZE = 50
 ELITE_SIZE = 10
 N_TEST_PROBLEMS = 20
 RUNS_PER_PROBLEM = 4
-MAX_PROBLEM_TIME = 1800.0
+MAX_PROBLEM_TIME = 180.0
 ALPHA = 0.7
 
-OUTPUT_PATH_PREFIX = '' # leave empty to write output files in the working dir
+OUTPUT_PATH_PREFIX = ''#os.environ['PBS_O_WORKDIR'] # leave empty to write output files in the working dir
 STATE_FILE_PATH = os.path.join(OUTPUT_PATH_PREFIX, 'search_state.npz')
 ALL_PROBLEMS = True
 GENERATE_PROBLEMS = True
@@ -220,9 +223,9 @@ iteration = 0
 while time.time() - start_time < TRAINING_TIME:
     
     # Renew Kerberos ticket
-    if time.time() - kinit_time > 5 * 3600:
-        subprocess.Popen("cat pass.txt | kinit", shell=True)
-        kinit_time = time.time()
+    #if time.time() - kinit_time > 5 * 3600:
+    #    subprocess.Popen("cat pass.txt | kinit", shell=True)
+    #    kinit_time = time.time()
     
     print('Mean: ', mean)
     print('Covariance:\n', cov)
@@ -260,7 +263,7 @@ while time.time() - start_time < TRAINING_TIME:
     
     # Only update the distribution if some problems have been solved
     if scores[sorted_ids[0]] > 0.001:
-        mean, cov = fixed_variance_evolution_step(mean, cov, params, sorted_ids)
+        mean, cov = cem_evolution_step(mean, cov, params, sorted_ids)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:
