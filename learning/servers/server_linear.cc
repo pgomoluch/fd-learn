@@ -10,9 +10,9 @@
 
 using namespace std;
 
-const char *socket_path = "fd-learn-socket";
+const char *socket_path = "/tmp/fd-learn-socket";
 const char *model_path = "model.txt";
-const int n_features = 5;
+const int n_features = 11;
 
 bool load_model(const char *file, vector<double> &weights, double &intercept);
 double evaluate(vector<double> &weights, double intercept, double features[]);
@@ -23,7 +23,6 @@ int main()
     double intercept;
     vector<double> weights;
     char buf[1000];
-    
     
     cout << "Loading model..." << endl;
     if(!load_model(model_path, weights, intercept))
@@ -60,37 +59,46 @@ int main()
     }
     cout << "Listening at " << socket_path << endl;
     
-    int cl = accept(fd, NULL, NULL);
-    if(cl == -1)
-    {
-        cout << "Error on accept" << endl;
-        return 5;
-    }
-    
-    int rc;
     while(true)
     {
-        int rc;
-        int n_read = 0;
-        while(n_read < weights.size()*sizeof(double))
+        int cl = accept(fd, NULL, NULL);
+        if(cl == -1)
         {
-            rc = read(cl, buf+n_read, sizeof(buf));
-            if(rc == 0)
-                terminate(0, "Connection closed by client");
-            n_read += rc;
+            cout << "Error on accept" << endl;
+            return 5;
         }
-        double *features = (double*)buf;
-        double result = evaluate(weights, intercept, features);
-        int n_written = 0;
-        while(n_written < sizeof(double))
+
+        int rc;
+        while(true)
         {
-            rc = write(cl, &result, sizeof(double));
-            n_written += rc;
-        }    
+            bool closed_by_client = false;
+            int rc;
+            int n_read = 0;
+            while(n_read < weights.size()*sizeof(double))
+            {
+                rc = read(cl, buf+n_read, sizeof(buf));
+                if(rc == 0)
+                {
+                    //terminate(0, "Connection closed by client");
+                    closed_by_client = true;
+                    break;
+                }
+                n_read += rc;
+            }
+            if(closed_by_client)
+                break;
+            double *features = (double*)buf;
+            double result = evaluate(weights, intercept, features);
+            int n_written = 0;
+            while(n_written < sizeof(double))
+            {
+                rc = write(cl, &result, sizeof(double));
+                n_written += rc;
+            }
+        }
+        // dead code for now
+        close(cl);
     }
-    // dead code for now
-    close(cl);
-    
     unlink(socket_path);
     cout << "Terminating successfully..." << endl;
     return 0;
