@@ -8,16 +8,16 @@ from sklearn.metrics import mean_squared_error
 
 features_train, features_test, labels_train, labels_test = plan_reader.read()
 
-print "Learning from {} examples.".format(len(labels_train))
-print "{} features.".format(len(features_train[0]))
-print "Mean label: {}".format(np.mean(labels_train))
-
 ############################
 #### FOR FINAL TRAINING ####
 ############################
 #features_train = np.append(features_train, features_test, 0)
 #labels_train = np.append(labels_train, labels_test, 0)
 ############################
+
+print "Learning from {} examples.".format(len(labels_train))
+print "{} features.".format(len(features_train[0]))
+print "Mean label: {}".format(np.mean(labels_train))
 
 #reg = LinearRegression()
 reg = Ridge()

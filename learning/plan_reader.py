@@ -21,7 +21,8 @@ default_dirs = [\
 #default_columns = [5,8,10,11,12,13,14,15,16] # v007: v006 + single
 #default_columns = [5,8,10,11,12,13] + range(17,17+9) # v008: v006 + pair
 #default_columns = [5,8,10,11,12,13,14,15,16] + range(17,17+9) #v009: v006 + single + pair
-default_columns = [5,8,10,11,12,13,14,15,16,17,18] # FF DI (AAAI-18)
+default_columns = [5,8,10,11,12,13,14,15,16,17,18] # FF DI (2018 heuristic learning paper)
+#default_columns = [5,9,19,20,21,22,23,24,25,26,27] # CEA DI (CEA version of 2018 heuristic learning paper)
 
 data_limits = [7000, 7000, 7000, 5000, 5000, 5000, 5000, 20000, 20000]
 
