@@ -50,11 +50,13 @@ output = condor/condor$(Process).out
 error = condor/condor$(Process).err
 log = condor/condor.log
 arguments = $(Process)
-requirements = regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)
+requirements = (Memory >= 15700 && (CpuModelNumber == 94 || CpuModelNumber == 158) && (Machine != "garonne.doc.ic.ac.uk"))
 queue {n_jobs}
 """
 
-### requirements = (regexp("^(edge|point|sprite)[0-9][0-9]", TARGET.Machine)) && (Machine != "point42.doc.ic.ac.uk") && (Machine != "sprite14.doc.ic.ac.uk")
+# 94 is arc, edge, point, sprite
+# 158 is corona and texel and many office machines
+### requirements = (regexp("^(arc|edge|point|sprite)[0-9][0-9]", TARGET.Machine)) && (Machine != "point50.doc.ic.ac.uk") && (Machine != "edge12.doc.ic.ac.uk") && (Machine != "point49.doc.ic.ac.uk")
 
 class CondorEvaluator(BaseEvaluator):
 
