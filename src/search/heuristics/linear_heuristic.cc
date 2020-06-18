@@ -27,13 +27,16 @@ LinearHeuristic::LinearHeuristic(const options::Options &options)
 LinearHeuristic::~LinearHeuristic() {}
 
 int LinearHeuristic::compute_heuristic(const GlobalState &global_state) {
+
     auto features = state_encoder.encode(global_state);
+    cout << features.size() << endl;
+    if (state_encoder.is_infinite())
+        return EvaluationResult::INFTY;
+
     double result = intercept;
     for(unsigned i=0; i<model.size(); ++i)
         result += model[i] * features[i];
-        
-    if(result > 2000000000.0) // I would comapre to max(int), but wouldn't it bring precision issues?
-        return 2147483647;
+
     return result;
 }
 

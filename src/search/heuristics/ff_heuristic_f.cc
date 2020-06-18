@@ -95,7 +95,8 @@ int FFHeuristicF::compute_heuristic(const GlobalState &global_state) {
     if (h_add == DEAD_END)
     {
         features = vector<double>(n_features, 0.0);
-        dd_features = vector<double>(schema_map.size(), 0.0);
+        int n_schemata = schema_map.size();
+        dd_features = vector<double>((n_schemata+1) * n_schemata, 0.0);
         return h_add;
     }
 
