@@ -10,6 +10,7 @@ import random
 import subprocess
 import sys
 import time
+from configparser import ConfigParser
 
 from rl_common import get_output_with_timeout, get_cost, compute_reference_costs, compute_ipc_reward, save_params
 from evaluators.condor_evaluator import CondorEvaluator
@@ -117,34 +118,6 @@ def get_all_problems():
     problems.sort()
     return [ (p, -1) for p in problems ]
 
-def score_params(params, paths_and_costs):
-    param_handler.save_params(params, PARAMS_PATH)
-    total_score = 0.0
-    for problem_path, reference_cost in paths_and_costs:
-        for i in range(RUNS_PER_PROBLEM):
-            plan_cost = -1
-            try:
-                problem_start = time.time()
-                planner_output = get_output_with_timeout(['../fast-downward.py',
-                    '--build', 'release64',  DOMAIN,  problem_path,
-                    '--heuristic', HEURISTIC, '--search',  SEARCH % PARAMS_PATH],
-                    MAX_PROBLEM_TIME)
-                problem_time = time.time() - problem_start
-                print('Problem time: ', problem_time)
-                plan_cost = get_cost(planner_output)
-            except subprocess.TimeoutExpired:
-                print('Failed to find a solution.')
-                problem_time = -1
-            
-            try:
-                reward = compute_ipc_reward(plan_cost, reference_cost)
-            except:
-                reward = 0.0
-                
-            total_score += reward
-    
-    return total_score
-
 def cem_evolution_step(mean, cov, params, sorted_ids):
     best_ids = sorted_ids[:ELITE_SIZE]
     new_mean = (1-ALPHA) * mean + ALPHA * np.mean(params[best_ids], 0)
@@ -174,17 +147,23 @@ def canonical_evolution_step(mean, cov, params, sorted_ids):
     
     return (new_mean, cov)
 
-
 canonical_evolution_step.weights = None
 
-continuing = False
 
-DOMAIN = sys.argv[1]
-PROBLEM_DIR = sys.argv[2]
-TRAINING_TIME = int(sys.argv[3])
-if len(sys.argv) > 4:
+
+conf = ConfigParser()
+conf.read(sys.argv[1])
+
+DOMAIN = conf['plan']['domain']
+PROBLEM_DIR = conf['plan']['problem_dir']
+TRAINING_TIME = conf['opt'].getfloat('training_time')
+state_file_entry = conf['opt'].get('state_file', None)
+
+continuing = False
+if state_file_entry:
     continuing = True
-    STATE_FILE_PATH = sys.argv[4]
+    STATE_FILE_PATH = state_file_entry
+
 
 start_time = time.time()
 params_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'params_log.txt'), 'w')
@@ -255,7 +234,6 @@ while time.time() - start_time < TRAINING_TIME:
     #    np.tile(np.array([[0.2,20,100,0.9]]), (POPULATION_SIZE//2, 1))),
     #    axis=0)
 
-    #scores = condor_score_params(params, paths_and_costs, condor_log)
     scores = evaluator.score_params(params, paths_and_costs, condor_log)
     
     scores = np.array(scores)
