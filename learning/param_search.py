@@ -42,13 +42,6 @@ UNITS = [0.05, 1, 0.05, 5]
 MIN_PARAMS = [0.0, 0.0, 0.0, 0.0]
 MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 
-POPULATION_SIZE = 50
-ELITE_SIZE = 10
-N_TEST_PROBLEMS = 20
-RUNS_PER_PROBLEM = 4
-MAX_PROBLEM_TIME = 180.0
-ALPHA = 0.7
-
 OUTPUT_PATH_PREFIX = ''#os.environ['PBS_O_WORKDIR'] # leave empty to write output files in the working dir
 STATE_FILE_PATH = os.path.join(OUTPUT_PATH_PREFIX, 'search_state.npz')
 ALL_PROBLEMS = True
@@ -154,8 +147,14 @@ canonical_evolution_step.weights = None
 conf = ConfigParser()
 conf.read(sys.argv[1])
 
-DOMAIN = conf['plan']['domain']
-PROBLEM_DIR = conf['plan']['problem_dir']
+DOMAIN = conf['problems']['domain']
+PROBLEM_DIR = conf['problems']['problem_dir']
+N_TEST_PROBLEMS = conf['problems'].getint('n_test_problems')
+MAX_PROBLEM_TIME = conf['problems'].getfloat('max_problem_time')
+
+POPULATION_SIZE = conf['opt'].getint('population_size')
+ELITE_SIZE = conf['opt'].getint('elite_size')
+ALPHA = conf['opt'].getfloat('alpha')
 TRAINING_TIME = conf['opt'].getfloat('training_time')
 state_file_entry = conf['opt'].get('state_file', None)
 
