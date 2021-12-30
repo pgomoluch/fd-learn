@@ -27,6 +27,14 @@ from problem_generators.floortile_generator import FloortileGenerator
 from parameter_handlers.direct_parameter_handler import DirectParameterHandler
 from parameter_handlers.neural_parameter_handler import NeuralParameterHandler
 
+generator_dict = {
+    'transport': TransportGenerator,
+    'parking': ParkingGenerator,
+    'elevators': ElevatorsGenerator,
+    'no-mystery': NomysteryGenerator,
+    'floortile': FloortileGenerator
+}
+
 evaluator_dict = {
     'sequential': SequentialEvaluator,
     'parallel': ParallelEvaluator,
@@ -43,44 +51,14 @@ SEARCH = SEARCH.format(
 #param_handler = DirectParameterHandler()
 param_handler = NeuralParameterHandler()
 
-# Random walk optimization
-INITIAL_PARAMS = [0.2, 5, 0.5, 20]
-UNITS = [0.05, 1, 0.05, 5]
-MIN_PARAMS = [0.0, 0.0, 0.0, 0.0]
-MAX_PARAMS = [1.0, float('inf'), 1.0, float('inf')]
 
 OUTPUT_PATH_PREFIX = ''#os.environ['PBS_O_WORKDIR'] # leave empty to write output files in the working dir
 STATE_FILE_PATH = os.path.join(OUTPUT_PATH_PREFIX, 'search_state.npz')
-ALL_PROBLEMS = True
-GENERATE_PROBLEMS = True
 PARAMS_DIR = os.path.join(OUTPUT_PATH_PREFIX, 'params')
 
-if GENERATE_PROBLEMS:
-    generator_class = TransportGenerator
-    generator_key = 'agr2019'
-    # generator = TransportGenerator(4, 11, 30)
-    # difficulty_level = -7
-    # generator = ParkingGenerator(21, 40)
-    # difficulty_level = 0
-    # generator = ElevatorsGenerator(60, 40, 10, 4, 1)
-    # difficulty_level = 0
-    # generator = NomysteryGenerator(15, 15, 1.5)
-    # difficulty_level = 0
 
-def generate_next(params):
-    param_id = random.randint(0, len(params)-1)
-    while True:
-        sign = random.randint(0,1)
-        value = params[param_id]
-        if sign:
-            value += UNITS[param_id]
-        else:
-            value -= UNITS[param_id]
-        if value >= MIN_PARAMS[param_id] and value <= MAX_PARAMS[param_id]: 
-            result = params.copy()
-            result[param_id] = value
-            return result
-
+# Legacy function for problems with known reference costs.
+# Not used with problem generation.
 def get_problem():
     if get_problem.problem_set is None:
         problems = glob.glob(PROBLEM_DIR + '/p*.pddl')
@@ -159,10 +137,26 @@ optimizer_dict = {
 conf = ConfigParser()
 conf.read(sys.argv[1])
 
-DOMAIN = conf['problems']['domain']
+DOMAIN_PATH = conf['problems']['domain_file']
 PROBLEM_DIR = conf['problems']['problem_dir']
 N_TEST_PROBLEMS = conf['problems'].getint('n_test_problems')
 MAX_PROBLEM_TIME = conf['problems'].getfloat('max_problem_time')
+generator_class = conf['problems'].get('problem_generator', None)
+if generator_class:
+    generator_class = generator_dict[generator_class]
+generator_key = conf['problems'].get('generator_key', None)
+difficulty_level = conf['problems'].get('difficulty_level', 0)
+generator_args = conf['problems'].get('generator_args', None)
+if generator_args:
+    generator_args = ast.literal_eval(generator_args)
+    generator = generator_class(*generator_args)
+
+if generator_key and generator_args:
+    print('WARNING: generator_key is set, generator_args will be ignored.')
+if generator_class and not generator_key and not generator_args:
+    print('''ERROR: set problem_generator without generator_key or generator_args.
+            Please set either the key or args or unset the generator to use existing problems.''')
+    sys.exit(1)
 
 POPULATION_SIZE = conf['opt'].getint('population_size')
 ELITE_SIZE = conf['opt'].getint('elite_size')
@@ -185,7 +179,7 @@ condor_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'condor_log.txt'), 'w')
 evaluator = evaluator_type(
     population_size = POPULATION_SIZE,
     n_test_problems = N_TEST_PROBLEMS,
-    domain_path = DOMAIN,
+    domain_path = DOMAIN_PATH,
     heuristic_str = HEURISTIC,
     search_str = SEARCH,
     max_problem_time = MAX_PROBLEM_TIME,
@@ -222,20 +216,21 @@ while time.time() - start_time < TRAINING_TIME:
     print('Mean: ', mean)
     print('Covariance:\n', cov)
     
-    # Choose the test problems
-    if ALL_PROBLEMS:
-        if GENERATE_PROBLEMS:
+    # Prepare the test problems
+    if generator_class:
+        # Generate new problems
+        if generator_key:
             generator_class.generate_series(generator_key, PROBLEM_DIR)
-        paths_and_costs = get_all_problems()
-    else:
-        paths_and_costs = []
-        for i in range(N_TEST_PROBLEMS):
-            if GENERATE_PROBLEMS:
-                problem_path = 'tmp-problems/p' + str(i) + '.pddl'
+            paths_and_costs = get_all_problems()
+        else:
+            paths_and_costs = []
+            for i in range(N_TEST_PROBLEMS):
+                problem_path = PROBLEM_DIR + '/p' + str(i) + '.pddl'
                 generator.generate(problem_path)
                 paths_and_costs.append((problem_path, -1))
-            else:
-                paths_and_costs.append(get_problem())
+    else:
+        # Use the problems already in the directory
+        paths_and_costs = get_all_problems()
     
     # Generate parameters
     params = np.random.multivariate_normal(mean, cov, POPULATION_SIZE)
@@ -271,7 +266,7 @@ while time.time() - start_time < TRAINING_TIME:
     np.savez(state_file, mean=mean, cov=cov)
     state_file.close()
     
-    if GENERATE_PROBLEMS and not ALL_PROBLEMS:
+    if generator_class and not generator_key:
         # Adjust problem difficulty based on current scores
         if scores[sorted_ids[POPULATION_SIZE // 2]] < 0.001:
             print('Decreasing problem difficulty...')
@@ -287,4 +282,3 @@ while time.time() - start_time < TRAINING_TIME:
     
 params_log.close()
 condor_log.close()
-
