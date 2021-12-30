@@ -27,6 +27,13 @@ from problem_generators.floortile_generator import FloortileGenerator
 from parameter_handlers.direct_parameter_handler import DirectParameterHandler
 from parameter_handlers.neural_parameter_handler import NeuralParameterHandler
 
+evaluator_dict = {
+    'sequential': SequentialEvaluator,
+    'parallel': ParallelEvaluator,
+    'mpi': MPIEvaluator,
+    'condor': CondorEvaluator
+}
+
 HEURISTIC = 'h1=ff(transform=adapt_costs(one))'
 SEARCH = 'parametrized(h1,params=%s,scales={scales_path})'
 SEARCH = SEARCH.format(
@@ -142,6 +149,11 @@ def canonical_evolution_step(mean, cov, params, sorted_ids):
 
 canonical_evolution_step.weights = None
 
+optimizer_dict = {
+    'cem': cem_evolution_step,
+    'fixed_variance': fixed_variance_evolution_step,
+    'canonical_evolution': canonical_evolution_step
+}
 
 
 conf = ConfigParser()
@@ -156,6 +168,8 @@ POPULATION_SIZE = conf['opt'].getint('population_size')
 ELITE_SIZE = conf['opt'].getint('elite_size')
 ALPHA = conf['opt'].getfloat('alpha')
 TRAINING_TIME = conf['opt'].getfloat('training_time')
+optimizer_step = optimizer_dict[conf['opt']['optimizer']]
+evaluator_type = evaluator_dict[conf['opt']['evaluator']]
 state_file_entry = conf['opt'].get('state_file', None)
 
 continuing = False
@@ -168,7 +182,7 @@ start_time = time.time()
 params_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'params_log.txt'), 'w')
 condor_log = open(os.path.join(OUTPUT_PATH_PREFIX, 'condor_log.txt'), 'w')
 
-evaluator = MPIEvaluator(
+evaluator = evaluator_type(
     population_size = POPULATION_SIZE,
     n_test_problems = N_TEST_PROBLEMS,
     domain_path = DOMAIN,
@@ -240,7 +254,7 @@ while time.time() - start_time < TRAINING_TIME:
     
     # Only update the distribution if some problems have been solved
     if scores[sorted_ids[0]] > 0.001:
-        mean, cov = cem_evolution_step(mean, cov, params, sorted_ids)
+        mean, cov = optimizer_step(mean, cov, params, sorted_ids)
 
     condor_log.write('Best parameters:\n')
     for i in sorted_ids:
