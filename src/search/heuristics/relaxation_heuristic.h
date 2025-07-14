@@ -19,8 +19,8 @@ struct UnaryOperator {
     Proposition *effect;
     int base_cost;
 
-    int unsatisfied_preconditions;
-    int cost; // Used for h^max cost or h^add cost;
+    int unsatisfied_preconditions = 0;
+    int cost = 0; // Used for h^max cost or h^add cost;
               // includes operator cost (base_cost)
     UnaryOperator(const std::vector<Proposition *> &pre, Proposition *eff,
                   int operator_no_, int base)

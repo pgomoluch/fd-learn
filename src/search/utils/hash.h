@@ -12,7 +12,7 @@ namespace utils {
   This function should only be called from within this module.
 */
 template<typename T>
-inline void hash_combine(size_t &hash, const T &value) {
+inline void hash_combine(std::size_t &hash, const T &value) {
     std::hash<T> hasher;
     /*
       The combination of hash values is based on issue 6.18 in
@@ -23,9 +23,9 @@ inline void hash_combine(size_t &hash, const T &value) {
 }
 
 template<typename Sequence>
-size_t hash_sequence(const Sequence &data, size_t length) {
-    size_t hash = 0;
-    for (size_t i = 0; i < length; ++i) {
+std::size_t hash_sequence(const Sequence &data, std::size_t length) {
+    std::size_t hash = 0;
+    for (std::size_t i = 0; i < length; ++i) {
         hash_combine(hash, data[i]);
     }
     return hash;

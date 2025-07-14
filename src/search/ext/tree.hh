@@ -214,6 +214,7 @@ class tree {
 
 				bool    operator==(const sibling_iterator&) const;
 				bool    operator!=(const sibling_iterator&) const;
+				sibling_iterator&  operator=(const sibling_iterator&) = default;
 				sibling_iterator&  operator++();
 				sibling_iterator&  operator--();
 				sibling_iterator   operator++(int);
