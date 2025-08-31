@@ -27,8 +27,10 @@ ParametrizedSearch::ParametrizedSearch(const Options &opts)
       f_evaluator(opts.get<ScalarEvaluator *>("f_eval", nullptr)),
       preferred_operator_heuristics(opts.get_list<Heuristic *>("preferred")),
       ref_time(opts.get<int>("t") / 2),
+      neural_parametrized(opts.get<bool>("neural", true)),
       params_path(opts.get<string>("params")),
-      scales_path(opts.get<string>("scales")),
+      scales_path(opts.get<string>("scales", "")),
+      log_path(opts.get<string>("log", "")),
       rng(system_clock::now().time_since_epoch().count()),
       //rng(0),
       //learning_log("rl-log.txt"),
@@ -39,13 +41,20 @@ ParametrizedSearch::ParametrizedSearch(const Options &opts)
     const vector<ScalarEvaluator*> &evals =
             opts.get_list<ScalarEvaluator *>("evals");
 
+    if(!log_path.empty()) {
+        learning_log.open(log_path);
+        logging = true;
+    }
+
     search_start = steady_clock::now();
     
     open_list = global_open_list.get();
 }
 
 void ParametrizedSearch::initialize() {
-    cout << "Conducting parametrized search...";
+    cout << "Conducting parametrized search ";
+    cout << (neural_parametrized ? "(neural)" : "(fixed parameters)")
+         << "..." << endl;
     assert(open_list);
 
     set<Heuristic*> hset;
@@ -134,7 +143,8 @@ SearchStatus ParametrizedSearch::step() {
         merge_local_list();
         open_list = global_open_list.get();
         exp_since_switch = 0;
-        update_search_parameters();
+        if (neural_parametrized)
+            update_search_parameters();
     } else if (open_list == global_open_list.get() && exp_since_switch >= GLOBAL_EXP_LIMIT) {
         restart_local_list();
         open_list = local_open_list.get();
@@ -314,8 +324,12 @@ vector<double> ParametrizedSearch::get_state_features() {
 void ParametrizedSearch::update_search_parameters()
 {
     auto features = get_state_features();
-    //for (auto f: features)
-    //    learning_log << f << " ";
+    if (logging) {
+        for (double f: features)
+            learning_log << f << " ";
+        learning_log << endl;
+    }
+
     for (unsigned i = 0; i < features.size(); ++i)
         features[i] /= FEATURE_SCALES[i];
         
@@ -468,9 +482,11 @@ static SearchEngine *_parse(OptionParser &parser) {
     parser.add_option<int>(
         "boost",
         "boost value for preferred operator open lists", "0");
-    parser.add_option<string>("params", "path to the weights file", "params.txt");
-    parser.add_option<string>("scales", "path to the file containing feature scales", "");
     parser.add_option<int>("t", "time allocated for the search [ms]", "1000");
+    parser.add_option<bool>("neural", "use neural network for parametrization", "true");
+    parser.add_option<string>("params", "path to the weights file", "params.txt");
+    parser.add_option<string>("scales", "path to the file containing feature scales", OptionParser::NONE);
+    parser.add_option<string>("log", "path to the features/parameters log", OptionParser::NONE);
 
     add_pruning_option(parser);
     SearchEngine::add_options_to_parser(parser);

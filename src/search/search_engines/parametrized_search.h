@@ -28,8 +28,6 @@ using SimpleRandomAccessStateOpenList = SimpleRandomAccessOpenList<StateOpenList
 class ParametrizedSearch : public SearchEngine {
     const bool reopen_closed_nodes;
 
-    const bool neural_parametrized = true;
-
     // Default search parameters
     double EPSILON = 0.5;
     unsigned ROLLOUT_LENGTH = 10;
@@ -63,11 +61,14 @@ class ParametrizedSearch : public SearchEngine {
     int initial_h = -1;
     int best_h = -1;
     const unsigned ref_time; // milliseconds
+    const bool neural_parametrized;
     std::string params_path;
     std::string scales_path;
+    std::string log_path;
     std::chrono::steady_clock::time_point search_start; 
     std::mt19937 rng;
     std::ofstream learning_log;
+    bool logging = false;
 
     //void start_f_value_statistics(EvaluationContext &eval_context);
     //void update_f_value_statistics(const SearchNode &node);
