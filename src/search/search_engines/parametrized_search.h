@@ -78,6 +78,7 @@ class ParametrizedSearch : public SearchEngine {
     void merge_local_list();
     void restart_local_list();
     void update_search_parameters();
+    void log_state_features();
     
     // Gets one state from the queue and expands it. Sets state id, applicable and preferred operators,
     // which can be useful e.g. to perform a random walk from the expanded state.

@@ -129,7 +129,8 @@ void ParametrizedSearch::initialize() {
 
     if (neural_parametrized)
         update_search_parameters();
-
+    else if (logging)
+        log_state_features();
 }
 
 void ParametrizedSearch::print_statistics() const {
@@ -145,6 +146,8 @@ SearchStatus ParametrizedSearch::step() {
         exp_since_switch = 0;
         if (neural_parametrized)
             update_search_parameters();
+        else if (logging)
+            log_state_features();
     } else if (open_list == global_open_list.get() && exp_since_switch >= GLOBAL_EXP_LIMIT) {
         restart_local_list();
         open_list = local_open_list.get();
@@ -354,6 +357,13 @@ void ParametrizedSearch::update_search_parameters()
     //learning_log << endl;
     //learning_log << EPSILON << " " << STALL_SIZE << " " << N_ROLLOUTS << " "
     //    << ROLLOUT_LENGTH << " " << GLOBAL_EXP_LIMIT << " " << LOCAL_EXP_LIMIT << endl << endl; 
+}
+
+void ParametrizedSearch::log_state_features() {
+    auto features = get_state_features();
+    for (double f: features)
+        learning_log << f << " ";
+    learning_log << endl;
 }
 
 EvaluationContext ParametrizedSearch::process_state(const SearchNode &node, const GlobalState &state,

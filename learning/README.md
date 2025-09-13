@@ -20,7 +20,13 @@ New problem generators can be added by subclassing the `base_generator`. A new g
 
 ### Feature scaling
 
-The neural search policies represent the current state of the planner using a number of high-level features ([Gomoluch et al. 2020](https://ojs.aaai.org//index.php/ICAPS/article/view/6748)). To ensure appropriate scaling of the features, a text file containing space-separated scaling factors for each of the features needs to be provided. By default, it will be the `scales.txt` file in the working directory. Typical expected or reasonable-maximum values for each of the features are both reasonable choices. [Gomoluch et al. 2020](https://ojs.aaai.org//index.php/ICAPS/article/view/6748)) used the maximum values of the features recorded when running the parametrized planner with default parameters on a separate batch of problems following the training distribution.
+The neural search policies represent the current state of the planner using a number of high-level features ([Gomoluch et al. 2020](https://ojs.aaai.org//index.php/ICAPS/article/view/6748)). To ensure appropriate scaling of the features, a text file containing scaling factors for each of the features needs to be provided. By default, it will be the `scales.txt` file in the working directory. Typical expected or reasonable-maximum values for each of the features are both reasonable choices. [Gomoluch et al. 2020](https://ojs.aaai.org//index.php/ICAPS/article/view/6748)) used the maximum values of the features recorded when running the parametrized planner with default parameters on a separate batch of problems following the training distribution. You can generate the scales file using the `find_scales.py`script with the same configuration file `param_search` uses, for example:
+
+`
+python find_scales.py config.cfg scales.txt
+`
+
+
 
 The feature representation is computed in [`ParametrizedSearch::get_state_features()`](../src/search/search_engines/parametrized_search.cc). The current features, in order, are:
 - the initial value of the heuristic,
